@@ -1,0 +1,14 @@
+operatorid: Roger
+
+listenport: 39118
+listenaddr: 172.20.0.2
+provisioneraddr: 172.20.0.2
+provisionerport: 12001
+
+mediatorid: 6001
+pcapdirectory: /scratch/openlipcaps/
+
+
+tlscert: clientB-crt.pem
+tlskey: clientB-key.pem
+tlsca: ca-crt.pem

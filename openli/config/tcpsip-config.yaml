@@ -1,0 +1,31 @@
+voipintercepts:
+  - liid: TCPSIPTEST
+    authcountrycode: NZ
+    deliverycountrycode: NZ
+    siptargets:
+      - username: 02825591554
+    mediator: 600
+    agencyid: testagency
+
+agencies:
+  - hi3address: 172.20.0.2
+    hi3port: 43332
+    hi2address: 172.20.0.2
+    hi2port: 44333
+    agencyid: "testagency"
+    keepalivefreq: 300
+    keepalivewait: 10
+
+
+sipservers:
+   - ip: 27.111.14.65
+     port: 5060
+
+clientport: 9001
+clientaddr: 172.20.0.2
+mediationport: 12001
+mediationaddr: 172.20.0.2
+
+tlscert: certs/server-crt.pem
+tlskey: certs/server-key.pem
+tlsca: certs/ca-crt.pem

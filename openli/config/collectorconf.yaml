@@ -1,0 +1,37 @@
+operatorid: Jimbo
+networkelementid: openli2018
+interceptpointid: "10g-dev1"
+
+encoderthreads: 2
+
+inputs:
+# - uri: dpdk:0000:42:00.1
+#   threads: 4
+#   reportdrops: yes
+# - uri: ring:dos1
+#   threads: 4
+  - uri: ring:eth0
+    threads: 4
+# - uri: ring:eth0
+#   threads: 1
+
+provisioneraddr: 172.20.0.2
+provisionerport: 9001
+
+logstatfrequency: 1
+
+sipdebugfile: /scratch/openlipcaps/badsip
+
+alumirrors:
+  - ip: 172.20.0.17
+    port: 8500
+
+jmirrors:
+  - ip: 192.168.251.2
+    port: 30030
+
+tlscert: clientA-crt.pem
+tlskey: clientA-key.pem
+tlsca: ca-crt.pem
+
+etsitls: false

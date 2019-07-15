@@ -1,0 +1,207 @@
+ipintercepts:
+# - liid: 110013
+#   authcountrycode: NZ
+#   deliverycountrycode: NZ
+#   accesstype: "Fiber"
+#   user: "RogerMegently"
+#   mediator: 6001
+#   agencyid: "NZP"
+
+# - liid: dpdktest
+#   authcountrycode: NZ
+#   deliverycountrycode: NZ
+#   accesstype: "LAN"
+#   staticips:
+#     - iprange: "10.3.0.1/24"
+#       sessionid: 1001
+#   mediator: 6001
+#   agencyid: "NZP"
+
+
+# - liid: statictest1
+#   authcountrycode: NZ
+#   deliverycountrycode: NZ
+#   accesstype: "Fiber"
+#   staticips:
+#     - iprange: "192.168.200.0/24"
+#       sessionid: 1000
+     #- iprange: "10.1.100.32/28"
+     #- iprange: "192.168.1.71/32"
+     #  sessionid: 1230
+#   mediator: 6001
+#   agencyid: "NZP"
+
+# - liid: OPENLIIPV4TEST
+#   authcountrycode: NZ
+#   deliverycountrycode: NZ
+#   accesstype: "LAN"
+#   staticips:
+#     - iprange: "192.168.1.73"
+#       sessionid: 7777
+     #- iprange: "2001:df0:4:4000:10cd::1/48"
+     #  sessionid: 9
+#   mediator: 6001
+#   agencyid: "NZP"
+
+ - liid: JMIRROR_TEST
+   authcountrycode: NZ
+   deliverycountrycode: NZ
+   accesstype: "LAN"
+   vendmirrorid: 0x41414141
+   mediator: 6001
+   agencyid: "NZP"
+
+ - liid: OPENLIIPV6TEST
+   authcountrycode: NZ
+   deliverycountrycode: NZ
+   accesstype: "LAN"
+   staticips:
+     - iprange: "2001:df0:4:4000:10cd::1/48"
+       sessionid: 9
+   mediator: 6001
+   agencyid: "NZP"
+
+
+# - liid: 300557
+#   authcountrycode: NZ
+#   deliverycountrycode: NZ
+#   ipaddr: "130.217.250.111"
+#   user: "Everything"
+#   mediator: 6001
+#   agencyid: "NZSIS"
+
+ - liid: 22
+   authcountrycode: NZ
+   deliverycountrycode: NZ
+   user: "test-ufb-traffic"
+   accesstype: "Fiber"
+   mediator: 6001
+   agencyid: "NZP"
+
+# Can't have two intercepts with the same ALU shim ID...
+
+# - liid: OPENLIALUTEST
+#   authcountrycode: NZ
+#   deliverycountrycode: NZ
+#   user: "unknown"
+#   accesstype: "xDSL"
+#   alushimid: 666777
+#   mediator: 6001
+#   agencyid: "NZP"
+
+ - liid: alumpls
+   authcountrycode: NZ
+   deliverycountrycode: NZ
+   user: "unknown"
+   alushimid: 0x00087e0c
+   mediator: 6001
+   agencyid: "NZP"
+   accesstype: "xDSL"
+
+
+voipintercepts:
+  - liid: X
+    authcountrycode: NZ
+    deliverycountrycode: NZ
+    siptargets:
+      - username: rogermegently
+        realm: foo.com
+      - username: 632
+        realm: voice.inspire.net.nz
+      - username: mrx
+    mediator: 6001
+    agencyid: "NZP"
+
+  - liid: anothervoip4
+    authcountrycode: NZ
+    deliverycountrycode: NZ
+    siptargets:
+      - username: 02825591554
+    mediator: 6001
+    agencyid: "NZP"
+
+
+#  - liid: 3454
+ #   authcountrycode: NZ
+#    deliverycountrycode: NZ
+#    mediator: 6001
+#    agencyid: "NZP"
+#    siptargets:
+ #     - username: francisco
+ #       realm: bestel.com
+
+  - liid: chriscalls
+    authcountrycode: NZ
+    deliverycountrycode: NZ
+    mediator: 6001
+    agencyid: "NZP"
+    siptargets:
+      - username: 6472190078
+
+
+#  - liid: 1022ABS
+#    authcountrycode: NZ
+#    deliverycountrycode: NZ
+#    sipuri: sip:0800454262@103.242.26.1
+#    mediator: 6001
+#    agencyid: "NZP"
+
+sipservers:
+  - ip: 121.79.226.211
+    port: 5060
+  - ip: 114.134.0.145
+    port: 5060
+  - ip: 27.111.14.65
+    port: 5060
+  - ip: 14.196.27.97
+    port: 5060
+
+radiusservers:
+#  - ip: 10.100.100.100
+#    port: 2000
+
+  - ip: 203.114.128.111
+    port: 1645
+  - ip: 203.114.128.111
+    port: 1646
+
+alumirrors:
+  - ip: 172.20.0.243
+    port: 8500
+
+agencies:
+ - hi3address: "172.16.0.30"
+   hi3port: 43332
+   hi2address: "172.16.0.30"
+   hi2port: 43333
+   agencyid: "NZP"
+   keepalivefreq: 10
+   keepalivewait: 5
+
+ - hi3address: "192.168.100.3"
+   hi3port: 10138
+   hi2address: "192.168.100.3"
+   hi2port: 10134
+   agencyid: "NZSIS"
+
+# - hi3address: "122.56.17.254"
+#   hi3port: 35001
+#   hi2address: "122.56.17.254"
+#   hi2port: 35000
+#   agencyid: "Neil"
+#   keepalivefreq: 120
+#   keepalivewait: 0
+
+voip-ignorecomfort: yes 
+clientport: 9001
+clientaddr: 172.20.0.2
+updateport: 9009
+updateaddr: 172.20.0.2
+mediationport: 12001
+mediationaddr: 172.20.0.2
+
+intercept-config-file: /home/salcock/git/openli/intercept-config.yaml
+
+tlscert: server-crt.pem
+tlskey: server-key.pem
+tlsca: ca-crt.pem
