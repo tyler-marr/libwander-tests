@@ -76,9 +76,6 @@ typedef struct wandder_pshdr {
     uint8_t * time;
     uint32_t time_len;
 
-    uint8_t * tv_usec;
-    uint32_t tv_usec_len;
-
     uint8_t * block_3;
     uint32_t block_3_len;
 
@@ -87,38 +84,51 @@ typedef struct wandder_pshdr {
 void wandder_pshdr_update(int64_t cin,
         int64_t seqno, struct timeval *tv, wandder_pshdr_t * hdr) {
 
-    //block 0 does not move
+   //reencode each field 
 
-    //if cin has not changed size
-        //copy new value into same location
-    //else if changed
-        //recalculate new length
-        //reencode new value
-        //memcpy block 1 into place
-        //mark dirty
-    
-    //if dirty
-        //reencode seqno and copy into new location
-        //memcpy block 2 into place
-    //else if not dirty 
-        //if seqno has not changed size
-            //copy new value into new location
-        //else if seq no has changed size
-            //recalculate new length
-            //reencode new value
-            //memcpy block 2 into place
-            //mark dirty
+   //and copy into old location 
 
-    //if dirty
-        //reencode tv_ and copy into new location
-        //memcpy block 3 into place
-    //else if not dirty 
-        //if tv_ has not changed size
-            //copy new value into location
-        //else if tv_ has changed size
-            //recalculate new length
-            //reencode new value
-            //memcpy block 2 into place
+   //SHOULD BE EXACTLY THE SAME SIZE
+
+    wandber_encoder_t *enc_ber = init_wandber_encoder();
+    wandber_encoded_result_t *res_ber;
+
+    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
+            sizeof(tv->tv_sec));
+    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(tv->tv_usec),
+            sizeof(tv->tv_usec));
+    res_ber = wandber_encode_finish(enc_ber);
+    memcpy(hdr->time, res_ber->buf, res_ber->length);
+    wandber_encoder_reset(enc_ber);
+    free(res_ber->buf);
+    free(res_ber);
+    res_ber = NULL;
+
+
+    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(cin),
+            sizeof(int64_t));
+    res_ber = wandber_encode_finish(enc_ber);
+    memcpy(hdr->cin, res_ber->buf, res_ber->length);
+    wandber_encoder_reset(enc_ber);
+    free(res_ber->buf);
+    free(res_ber);
+    res_ber = NULL;
+
+
+    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(seqno),
+            sizeof(int64_t));
+    res_ber = wandber_encode_finish(enc_ber);
+    memcpy(hdr->seqno, res_ber->buf, res_ber->length);
+    wandber_encoder_reset(enc_ber);
+    free(res_ber->buf);
+    free(res_ber);
+    res_ber = NULL;
+
+    free_wandber_encoder(enc_ber);
 }
 
 
@@ -244,7 +254,7 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     header->block_2_len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
-    //////////////////////////////////////////////////////////////// tv_usec
+    //////////////////////////////////////////////////////////////// tv_utimesec
     wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
             WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
             sizeof(tv->tv_sec));
@@ -254,8 +264,8 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     
     res_ber = wandber_encode_finish(enc_ber);
 
-    header->tv_usec = res_ber->buf;
-    header->tv_usec_len = res_ber->length;
+    header->time = res_ber->buf;
+    header->time_len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
     //////////////////////////////////////////////////////////////// block 3
@@ -279,7 +289,7 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
             header->block_1_len +
             header->seqno_len +
             header->block_2_len +
-            header->tv_usec_len +
+            header->time_len +
             header->block_3_len;
     freetemp = realloc(header->block_0, header->totallen);
     header->block_0 = freetemp;
@@ -320,14 +330,14 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     freetemp = memcpy(
             header->block_2 + 
             header->block_2_len, 
-            header->tv_usec, 
-            header->tv_usec_len);
-    free(header->tv_usec);
-    header->tv_usec = freetemp;
+            header->time, 
+            header->time_len);
+    free(header->time);
+    header->time = freetemp;
 
     freetemp = memcpy(
-            header->tv_usec + 
-            header->tv_usec_len, 
+            header->time + 
+            header->time_len, 
             header->block_3, 
             header->block_3_len);
     free(header->block_3);
@@ -346,7 +356,7 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     // printf("\n");
     // PRINTBUF(header->block_2, header->block_2_len)
     // printf("\n");
-    // PRINTBUF(header->tv_usec, header->tv_usec_len)
+    // PRINTBUF(header->time, header->time_len)
     // printf("\n");
     // PRINTBUF(header->block_3, header->block_3_len)
     // printf("\n");
@@ -660,6 +670,10 @@ wandder_encoded_result_t *encode_etsi_ipcc(wandder_encoder_t *encoder,
     }
 
     //append hdr to start of encoder 
+
+    // //printf("All together:\n");
+    // PRINTBUF((*hdr)->block_0, (*hdr)->totallen)
+    // printf("\n");
     
     encode_ipcc_body(encoder, precomputed, ipcontents, iplen, dir);
     return wandder_encode_finish(encoder);
@@ -773,16 +787,6 @@ int main(int argc, char *argv[])
         runtimes)
 
 
-    // res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, tv, ipcontents, iplen, dir, hdr);
-    // free(*hdr);
-    // *hdr = NULL;
-    // res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, tv, ipcontents, iplen, dir, hdr);
-    // res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, tv, ipcontents, iplen, dir, hdr);
-    
-    
-
-
-
     etsili_clear_preencoded_fields(preencoded);
     free(preencoded);
     free_wandder_encoder(encoder);
@@ -797,98 +801,8 @@ int main(int argc, char *argv[])
     free(tv);
     free((*hdr)->block_0);
     free(*hdr);
-    
-    // wandder_decoder_t *dec = init_wandder_decoder(NULL, res_der->encoded,res_der->len, 0);
-
-    // if (dec == NULL){
-    //     return 0;
-    // }
-
-    // while(1){
-    //     int ret;
-
-    //     ret = wandder_decode_next(dec);
-
-    //     if (ret <= 0)
-    //         break;
-        
-    //     uint8_t class = wandder_get_class(dec);
-    //     const char * tag = wandder_get_tag_string(dec);
-    //     uint16_t level = wandder_get_level(dec);
-    //     uint32_t itemlen = wandder_get_itemlen(dec);
-    //     uint8_t *itemptr = wandder_get_itemptr(dec);
-    //     //uint32_t id = wandder_get_identifier(dec);
-        
-    //     printf("%3ld:", (itemptr-buf)-dec->current->preamblelen);
-    //     printf("d=%-2d ", level);
-    //     printf("hl=%-2d ", dec->current->preamblelen);
-    //     if (dec->current->indefform){
-    //         printf("l=inf  ");
-    //     } else {
-    //         printf("l=%4d ", itemlen);
-    //     }                
-    //     printf("%s: ", (class & 1) ? "cons" : "prim");
-    //     printf("%-20s ", tag);
-
-    //     //printf("decode next = %3d", ret); 
-
-    //     printf("\n");
-
-    //     // if (class == 0 && itemlen == 0 && id == 0){
-    //     //     wandber_encode_endseq(enc_ber);
-    //     //     wandder_encode_endseq(enc_der);
-    //     // } else {
-
-    //     //     if (dec->current->identclass & 1){
-    //     //         wandder_encode_next(enc_der, WANDDER_TAG_SEQUENCE, WANDDER_CLASS_CONTEXT_CONSTRUCT, id, NULL, 0);
-    //     //     } else{
-    //     //         wandder_encode_next(enc_der, id, class, id, itemptr, itemlen);
-    //     //     }
-            
-
-    //     //     wandber_encode_next(enc_ber, id, class, id, itemptr, itemlen, dec->current->indefform);
-            
-
-    //     // }
-    // }
-    // close(fd);
-    // free_wandder_decoder(dec);
-    // dec = NULL;
     free(buf);
     buf = NULL;
-
-
-
-
-    // // wandber_encoded_result_t * res_ber = wandber_encode_finish(enc_ber);
-    // // fd = open("hexdup", O_CREAT | O_WRONLY);
-    // // if(fd == -1){
-    // //     return -1;
-    // // }
-    // // write(fd, res_ber->buf, res_ber->length);
-    // // close(fd);
-    // // free_wandber_encoder(enc_ber);
-    // // enc_ber = NULL;
-    // // wandber_encoded_release_result(res_ber);
-    // // res_ber = NULL;
-
-    // ////////////////
-
-    
-    // fd = open("hexdupder", O_CREAT | O_WRONLY);
-    // if(fd == -1){
-    //     return -1;
-    // }
-    // write(fd, res_der->encoded, res_der->len);
-    // close(fd);
-    // free_wandder_encoder(encoder);
-    // encoder = NULL;
-    // wandder_release_encoded_result(encoder, res_der);
-    // res_der = NULL;
-
-
-
-
 
     return 0;
 }
