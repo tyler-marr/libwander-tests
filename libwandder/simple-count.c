@@ -49,91 +49,94 @@
             samples = 1;                                                                    \
         }                                                                                   \
     }                                                                                       \
-    printf("took avg:%6lu over %d samples\n",total/samples, num);}
-
-char* MALSTR(char * s){
-    char * ret = malloc(strlen(s) + 1); 
-    strcpy(ret, s);
-    return ret;
-
-}
+    printf("took avg:%6luns over %d samples\n",total/samples , num);}
 
 uint8_t etsi_ipccoid[4] = {0x05, 0x03, 0x0a, 0x02};
 uint8_t etsi_ipirioid[4] = {0x05, 0x03, 0x0a, 0x01};
 uint8_t etsi_ipmmccoid[4] = {0x05, 0x05, 0x06, 0x02};
 uint8_t etsi_ipmmirioid[4] = {0x05, 0x05, 0x06, 0x01};
 uint8_t trueResult[] = {
-            0xa1, 0x80, 0x80, 0x08, 0x04, 0x00, 0x02, 0x02, 
-            0x05, 0x01, 0x11, 0x00, 0x81, 0x04, 0x6c, 0x69, 
-            0x69, 0x64, 0x82, 0x06, 0x61, 0x75, 0x74, 0x68,
-            0x63, 0x63, 0xa3, 0x80, 0xa0, 0x80, 0x80, 0x0a,
-            0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72,
-            0x69, 0x64, 0x81, 0x0d, 0x6e, 0x65, 0x74, 0x77,
-            0x6f, 0x72, 0x6b, 0x65, 0x6c, 0x65, 0x6d, 0x69,
-            0x64, 0x00, 0x00, 0x81, 0x85, 0x00, 0x00, 0x00,
-            0x00, 0x03, 0x01, 0xe2, 0x40, 0x82, 0x07, 0x64,
-            0x65, 0x6c, 0x69, 0x76, 0x63, 0x63, 0x00, 0x00,
-            0x84, 0x85, 0x00, 0x00, 0x00, 0x00, 0x03, 0x09,
-            0xfb, 0xf1, 0x86, 0x0a, 0x69, 0x6e, 0x74, 0x70,
-            0x6f, 0x69, 0x6e, 0x74, 0x69, 0x64, 0xa7, 0x80,
-            0x80, 0x84, 0x00, 0x00, 0x00, 0x04, 0x2e, 0x22,
-            0x85, 0xc0, 0x81, 0x86, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x02, 0x13, 0x37, 0x00, 0x00, 0x88, 0x01,
-            0x01, 0x00, 0x00};
+            0xa1, 0x80, 
+                0x80, 0x08, 0x04, 0x00, 0x02, 0x02, 0x05, 0x01, 0x11, 0x00, 
+                0x81, 0x04, 0x6c, 0x69, 0x69, 0x64, 
+                0x82, 0x06, 0x61, 0x75, 0x74, 0x68, 0x63, 0x63, 
+                0xa3, 0x80, 
+                    0xa0, 0x80, 
+                        0x80, 0x0a, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x69, 0x64,
+                        0x81, 0x0d, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x65, 0x6c, 0x65, 0x6d, 0x69, 0x64, 
+                    0x00, 0x00, 
+                    0x81, 0x84, 0x00, 0x00, 0x00, 0x04, 0xfe, 0xed, 0xbe, 0xef, 
+                    0x82, 0x07, 0x64, 0x65, 0x6c, 0x69, 0x76, 0x63, 0x63, 
+                0x00, 0x00, 
+                0x84, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xde, 0xad,
+                0x86, 0x0a, 0x69, 0x6e, 0x74, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x69, 0x64,
+                0xa7, 0x80,
+                    0x80, 0x84, 0x00, 0x00, 0x00, 0x04, 0x0b, 0xad, 0xca, 0xfe, 
+                    0x81, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x13, 0x37, 
+                0x00, 0x00,
+                0x88, 0x01, 0x01, 
+            0x00, 0x00};
+/*
+[1] (8 elem)
+    [0] (8 byte) 0400020205011100
+    [1] liid
+    [2] authcc
+    [3] (3 elem)
+        [0] (2 elem)
+            [0] operatorid
+            [1] networkelemid
+        [1] (4 byte) FEEDBEEF
+        [2] delivcc
+    [4] (2 byte) DEAD
+    [6] intpointid
+    [7] (2 elem)
+        [0] (4 byte) 0BADCAFE
+        [1] (2 byte) 1337
+    [8] (1 byte) 01
+  */
 
 typedef struct wandder_pshdr {
     uint32_t totallen;
-
-    wandder_buf_t *block_0;
-
-    wandder_buf_t *cin;
-
-    wandder_buf_t *block_1;
-
-    wandder_buf_t *seqno;
-
-    wandder_buf_t *block_2;
-
-    wandder_buf_t *sec;
-
-    wandder_buf_t *usec;
-
-    wandder_buf_t *block_3;
-
+    wandder_buf_t block_0;
+    wandder_buf_t cin;
+    wandder_buf_t block_1;
+    wandder_buf_t seqno;
+    wandder_buf_t block_2;
+    wandder_buf_t sec;
+    wandder_buf_t usec;
+    wandder_buf_t block_3;
 } wandder_pshdr_t;
 
 void wandder_pshdr_update(int64_t cin,
         int64_t seqno, struct timeval *tv, wandder_pshdr_t * hdr) {
 
-    uint32_t ret = 0;
-
-    ret = ber_rebuild_integer(
+    ber_rebuild_integer(
         WANDDER_CLASS_CONTEXT_PRIMITIVE, 
         1, 
         &(cin), 
         sizeof(int64_t),
-        hdr->cin->buf);
+        hdr->cin.buf);
 
-    ret = ber_rebuild_integer(
+    ber_rebuild_integer(
         WANDDER_CLASS_CONTEXT_PRIMITIVE, 
         4, 
         &(seqno), 
         sizeof(int64_t),
-        hdr->seqno->buf);
+        hdr->seqno.buf);
 
-    ret = ber_rebuild_integer(
+    ber_rebuild_integer(
         WANDDER_CLASS_CONTEXT_PRIMITIVE, 
         0, 
         &(tv->tv_sec), 
         sizeof(tv->tv_sec),
-        hdr->sec->buf);
+        hdr->sec.buf);
 
-    ret = ber_rebuild_integer(
+    ber_rebuild_integer(
         WANDDER_CLASS_CONTEXT_PRIMITIVE, 
         1, 
         &(tv->tv_usec), 
         sizeof(tv->tv_usec),
-        hdr->usec->buf);
+        hdr->usec.buf);
 }
 
 
@@ -182,33 +185,11 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
      * CIN, seqno and tv will change for each record, so I've made them
      * into separate parameters.
      */
-    //uses an array to only need a single call to calloc
     wandder_pshdr_t *header = malloc(sizeof(wandder_pshdr_t));
-    // header->block_0 = calloc(sizeof (wandder_buf_t), 8);
-    // header->cin     = &header->block_0[1];
-    // header->block_1 = &header->block_0[2];
-    // header->seqno   = &header->block_0[3];
-    // header->block_2 = &header->block_0[4];
-    // header->sec     = &header->block_0[5];
-    // header->usec    = &header->block_0[6];
-    // header->block_3 = &header->block_0[7];
-
-    header->block_0 = calloc(sizeof (wandder_buf_t), 1);
-    header->cin     = calloc(sizeof (wandder_buf_t), 1);
-    header->block_1 = calloc(sizeof (wandder_buf_t), 1); 
-    header->seqno   = calloc(sizeof (wandder_buf_t), 1);
-    header->block_2 = calloc(sizeof (wandder_buf_t), 1);
-    header->sec     = calloc(sizeof (wandder_buf_t), 1);
-    header->usec    = calloc(sizeof (wandder_buf_t), 1);
-    header->block_3 = calloc(sizeof (wandder_buf_t), 1);
-
     uint8_t *freetemp;
     uint32_t ret;
-
     wandber_encoded_result_t *res_ber;  
-
     wandber_encoder_t *enc_ber = init_wandber_encoder();
-
     wandder_encode_job_t *jobarray[9];
 
 
@@ -227,57 +208,37 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     
     res_ber = wandber_encode_finish(enc_ber);
 
-    header->block_0->buf = res_ber->buf;
-    header->block_0->len = res_ber->length;
+    header->block_0.buf = res_ber->buf;
+    header->block_0.len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
     //////////////////////////////////////////////////////////////// cin
-    // wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-    //         WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(cin),
-    //         sizeof(int64_t));
-    // res_ber = wandber_encode_finish(enc_ber);
-    // header->cin->buf = res_ber->buf;
-    // header->cin->len = res_ber->length;
-    // free(res_ber);
-    // res_ber = NULL;
-
     ret = ber_create_integer(
         WANDDER_CLASS_CONTEXT_PRIMITIVE, 
         1, 
         &(cin), 
         sizeof(int64_t),
-        header->cin);
-    header->cin->len = ret;  
-    
+        &header->cin);
+    header->cin.len = ret;    
     //////////////////////////////////////////////////////////////// block 1
     jobarray[0] = &(precomputed[OPENLI_PREENCODE_DELIVCC]);
+
     wandber_encode_next_preencoded(enc_ber, jobarray, 1);
     wandber_encode_endseq_repeat(enc_ber, 1);
     res_ber = wandber_encode_finish(enc_ber); 
 
-    header->block_1->buf = res_ber->buf;
-    header->block_1->len = res_ber->length;
+    header->block_1.buf = res_ber->buf;
+    header->block_1.len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
     //////////////////////////////////////////////////////////////// seqno
-    // wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-    //         WANDDER_CLASS_CONTEXT_PRIMITIVE, 4, &(seqno),
-    //         sizeof(int64_t));
-    // res_ber = wandber_encode_finish(enc_ber); 
-
-    // header->seqno->buf = res_ber->buf;
-    // header->seqno->len = res_ber->length;
-    // free(res_ber);
-    // res_ber = NULL;
-
     ret = ber_create_integer(
         WANDDER_CLASS_CONTEXT_PRIMITIVE, 
         4, 
         &(seqno), 
         sizeof(int64_t),
-        header->seqno);
-    header->seqno->len = ret;
-
+        &header->seqno);
+    header->seqno.len = ret;
     //////////////////////////////////////////////////////////////// block 2
     if (precomputed[OPENLI_PREENCODE_INTPOINTID].valspace) {
         jobarray[0] = &(precomputed[OPENLI_PREENCODE_INTPOINTID]);
@@ -289,46 +250,26 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     }
     res_ber = wandber_encode_finish(enc_ber);
 
-    header->block_2->buf = res_ber->buf;
-    header->block_2->len = res_ber->length;
+    header->block_2.buf = res_ber->buf;
+    header->block_2.len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
     //////////////////////////////////////////////////////////////// tv_utimesec
-    // wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-    //         WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
-    //         sizeof(tv->tv_sec));
-    // res_ber = wandber_encode_finish(enc_ber);
-    // header->sec->buf = res_ber->buf;
-    // header->sec->len = res_ber->length;
-    // free(res_ber);
-    // res_ber = NULL;
-
-    // wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-    //         WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(tv->tv_usec),
-    //         sizeof(tv->tv_usec));
-    // res_ber = wandber_encode_finish(enc_ber);
-    // header->usec->buf = res_ber->buf;
-    // header->usec->len = res_ber->length;
-    // free(res_ber);
-    // res_ber = NULL;
-
-
     ret = ber_create_integer(
         WANDDER_CLASS_CONTEXT_PRIMITIVE, 
         0, 
         &(tv->tv_sec), 
         sizeof(tv->tv_sec),
-        header->sec);
-    header->sec->len = ret;
+        &header->sec);
+    header->sec.len = ret;
 
     ret = ber_create_integer(
         WANDDER_CLASS_CONTEXT_PRIMITIVE, 
         1, 
         &(tv->tv_usec), 
         sizeof(tv->tv_usec),
-        header->usec);
-    header->usec->len += ret;
-
+        &header->usec);
+    header->usec.len = ret;
     //////////////////////////////////////////////////////////////// block 3
     wandber_encode_endseq_repeat(enc_ber, 1);
 
@@ -337,8 +278,8 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     wandber_encode_endseq_repeat(enc_ber, 1);
     res_ber = wandber_encode_finish(enc_ber);
 
-    header->block_3->buf = res_ber->buf;
-    header->block_3->len = res_ber->length;
+    header->block_3.buf = res_ber->buf;
+    header->block_3.len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
     //////////////////////////////////////////////////////////////// end
@@ -347,159 +288,75 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
 
     //this some bullshit
     header->totallen = 
-            header->block_0->len +
-            header->cin->len + 
-            header->block_1->len +
-            header->seqno->len +
-            header->block_2->len +
-            header->sec->len +
-            header->usec->len +
-            header->block_3->len;
-    freetemp = realloc(header->block_0->buf, header->totallen);
-    header->block_0->buf = freetemp;
+            header->block_0.len +
+            header->cin.len + 
+            header->block_1.len +
+            header->seqno.len +
+            header->block_2.len +
+            header->sec.len +
+            header->usec.len +
+            header->block_3.len;
+    freetemp = realloc(header->block_0.buf, header->totallen); //TODO avoid this large re-realloc
+    header->block_0.buf = freetemp;
 
 
     freetemp = memcpy(
-            header->block_0->buf + 
-            header->block_0->len, 
-            header->cin->buf, 
-            header->cin->len);
-    free(header->cin->buf);
-    header->cin->buf = freetemp;
+            header->block_0.buf + 
+            header->block_0.len, 
+            header->cin.buf, 
+            header->cin.len);
+    free(header->cin.buf);
+    header->cin.buf = freetemp;
 
     freetemp = memcpy(
-                header->cin->buf + 
-                header->cin->len, 
-                header->block_1->buf, 
-                header->block_1->len);
-    free(header->block_1->buf);
-    header->block_1->buf = freetemp;
+                header->cin.buf + 
+                header->cin.len, 
+                header->block_1.buf, 
+                header->block_1.len);
+    free(header->block_1.buf);
+    header->block_1.buf = freetemp;
 
     freetemp = memcpy(
-            header->block_1->buf + 
-            header->block_1->len, 
-            header->seqno->buf, 
-            header->seqno->len);
-    free(header->seqno->buf);
-    header->seqno->buf = freetemp;
+            header->block_1.buf + 
+            header->block_1.len, 
+            header->seqno.buf, 
+            header->seqno.len);
+    free(header->seqno.buf);
+    header->seqno.buf = freetemp;
 
     freetemp = memcpy(
-            header->seqno->buf + 
-            header->seqno->len, 
-            header->block_2->buf, 
-            header->block_2->len);
-    free(header->block_2->buf);
-    header->block_2->buf = freetemp;
+            header->seqno.buf + 
+            header->seqno.len, 
+            header->block_2.buf, 
+            header->block_2.len);
+    free(header->block_2.buf);
+    header->block_2.buf = freetemp;
 
     freetemp = memcpy(
-            header->block_2->buf + 
-            header->block_2->len, 
-            header->sec->buf, 
-            header->sec->len);
-    free(header->sec->buf);
-    header->sec->buf = freetemp;
+            header->block_2.buf + 
+            header->block_2.len, 
+            header->sec.buf, 
+            header->sec.len);
+    free(header->sec.buf);
+    header->sec.buf = freetemp;
 
     freetemp = memcpy(
-            header->sec->buf + 
-            header->sec->len, 
-            header->usec->buf, 
-            header->usec->len);
-    free(header->usec->buf);
-    header->usec->buf = freetemp;
+            header->sec.buf + 
+            header->sec.len, 
+            header->usec.buf, 
+            header->usec.len);
+    free(header->usec.buf);
+    header->usec.buf = freetemp;
 
     freetemp = memcpy(
-            header->usec->buf + 
-            header->usec->len, 
-            header->block_3->buf, 
-            header->block_3->len);
-    free(header->block_3->buf);
-    header->block_3->buf = freetemp;
+            header->usec.buf + 
+            header->usec.len, 
+            header->block_3.buf, 
+            header->block_3.len);
+    free(header->block_3.buf);
+    header->block_3.buf = freetemp;
  
-    // printf("TOTAL:\n");
-    // PRINTBUF(header->block_0, header->block_0_len)
-    // printf("\n");
-    // PRINTBUF(header->cin, header->cin_len)
-    // printf("\n");
-    // PRINTBUF(header->block_1, header->block_1_len)
-    // printf("\n");
-    // PRINTBUF(header->seqno, header->seqno_len)
-    // printf("\n");
-    // PRINTBUF(header->block_2, header->block_2_len)
-    // printf("\n");
-    // PRINTBUF(header->sec, header->time_len)
-    // printf("\n");
-    // PRINTBUF(header->usec, header->time_len)
-    // printf("\n");
-    // PRINTBUF(header->block_3, header->block_3_len)
-    // printf("\n");
-    // printf("All together:\n");
-    // PRINTBUF(header->block_0, header->totallen)
-    // printf("\n");
-
     return header;
-
-
-}
-
-static inline void encode_etsili_pshdr_pc(wandder_encoder_t *encoder,
-        wandder_encode_job_t *precomputed, int64_t cin,
-        int64_t seqno, struct timeval *tv) {
-
-    /* hdrdata should be pretty static for each ETSI LI record, so
-     * you can populate it once and repeatedly use it.
-     * CIN, seqno and tv will change for each record, so I've made them
-     * into separate parameters.
-     */
-
-    wandder_encode_job_t *jobarray[9];
-
-    jobarray[0] = &(precomputed[OPENLI_PREENCODE_USEQUENCE]);
-    jobarray[1] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_1]);
-    jobarray[2] = &(precomputed[OPENLI_PREENCODE_PSDOMAINID]);
-    jobarray[3] = &(precomputed[OPENLI_PREENCODE_LIID]);
-    jobarray[4] = &(precomputed[OPENLI_PREENCODE_AUTHCC]);
-    jobarray[5] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_3]);
-    jobarray[6] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_0]);
-    jobarray[7] = &(precomputed[OPENLI_PREENCODE_OPERATORID]);
-    jobarray[8] = &(precomputed[OPENLI_PREENCODE_NETWORKELEMID]);
-
-    wandder_encode_next_preencoded(encoder, jobarray, 9);
-    END_ENCODED_SEQUENCE(encoder, 1)
-
-    wandder_encode_next(encoder, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(cin),
-            sizeof(int64_t));
-
-    jobarray[0] = &(precomputed[OPENLI_PREENCODE_DELIVCC]);
-    wandder_encode_next_preencoded(encoder, jobarray, 1);
-
-    END_ENCODED_SEQUENCE(encoder, 1)
-
-    wandder_encode_next(encoder, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 4, &(seqno),
-            sizeof(int64_t));
-
-    if (precomputed[OPENLI_PREENCODE_INTPOINTID].valspace) {
-        jobarray[0] = &(precomputed[OPENLI_PREENCODE_INTPOINTID]);
-        jobarray[1] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_7]);
-        wandder_encode_next_preencoded(encoder, jobarray, 2);
-    } else {
-        jobarray[0] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_7]);
-        wandder_encode_next_preencoded(encoder, jobarray, 1);
-    }
-
-    wandder_encode_next(encoder, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
-            sizeof(tv->tv_sec));
-    wandder_encode_next(encoder, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(tv->tv_usec),
-            sizeof(tv->tv_usec));
-    END_ENCODED_SEQUENCE(encoder, 1)
-
-    jobarray[0] = &(precomputed[OPENLI_PREENCODE_TVCLASS]);
-    wandder_encode_next_preencoded(encoder, jobarray, 1);
-    END_ENCODED_SEQUENCE(encoder, 1)
-
 }
 
 static inline void encode_ipcc_body(wandder_encoder_t *encoder,
@@ -731,177 +588,119 @@ wandder_encoded_result_t *encode_etsi_ipcc(wandder_encoder_t *encoder,
         struct timeval *tv, void *ipcontents, uint32_t iplen, uint8_t dir,
         wandder_pshdr_t **hdr) {
 
-
     reset_wandder_encoder(encoder);
-
 
     if (*hdr){
         wandder_pshdr_update(cin, seqno, tv, *hdr);
     } else {
         *hdr = init_pshdr_pc(precomputed, cin, seqno, tv);
     }
-
-    //append hdr to start of encoder 
-
-    // //printf("All together:\n");
-    // PRINTBUF((*hdr)->block_0, (*hdr)->totallen)
-    // printf("\n");
     
     encode_ipcc_body(encoder, precomputed, ipcontents, iplen, dir);
     wandder_encoded_result_t * res = wandder_encode_finish(encoder);
     return res;
-
 }
 
 int main(int argc, char *argv[])
 {
-        
-    int fd = open("ipcchex", O_RDONLY);
-    if(fd == -1){
-        return -1;
-    }
+    wandder_encode_job_t preencoded[OPENLI_PREENCODE_LAST];
+    etsili_intercept_details_t details;
+    details.liid           = "liid"; 
+    details.authcc         = "authcc";
+    details.delivcc        = "delivcc";
+    details.intpointid     = "intpointid";
+    details.operatorid     = "operatorid";
+    details.networkelemid  = "networkelemid";    
+    etsili_preencode_static_fields(preencoded, &details);
 
-        
-    struct stat st;
-    fstat(fd, &st);
-    int size = st.st_size;
-
-    uint8_t *buf;
-    buf = malloc(size * sizeof(uint8_t));
-
-    read(fd, buf, size);
-
-        // printf("Dump:");
-        // for (int i = 0; i < size; i++){               
-        //         if (i % 16 == 0){
-        //                 printf("\n");
-        //         }
-        //         printf("%02x ", buf[i]);
-        // }
-        // printf("\nEND OF DUMP\n");
-
-    
-    etsili_intercept_details_t *details = malloc(sizeof (etsili_intercept_details_t));
-
-    details->liid           = MALSTR("liid"); 
-    details->authcc         = MALSTR("authcc");
-    details->delivcc        = MALSTR("delivcc");
-    details->intpointid     = MALSTR("intpointid");
-    details->operatorid     = MALSTR("operatorid");
-    details->networkelemid  = MALSTR("networkelemid");
-
-    wandder_encode_job_t *preencoded = malloc(sizeof (wandder_encode_job_t)* OPENLI_PREENCODE_LAST);
-
-    etsili_preencode_static_fields(preencoded, details);
+    wandder_encoder_t *encoder = init_wandder_encoder();
+    wandder_encoded_result_t *res_der;
     
     int64_t cin = 0xfeedbeef;
     int64_t seqno = 0xdead;
-    struct timeval *tv = malloc(sizeof(struct timeval));
-    gettimeofday(tv, NULL);
-
-    char* ipcontents = MALSTR("this is the ippc body or the ipcontents");
+    struct timeval tv;
+    tv.tv_sec = 0xBADCAFE;
+    tv.tv_usec = 0x1337;
+    char* ipcontents = "this is the ippc body or the ipcontents";
     uint32_t iplen = strlen(ipcontents);
     uint8_t dir = 0;
     
-    wandder_encoder_t *encoder = init_wandder_encoder();
-    wandder_encoded_result_t *res_der;
+    
 
     //exit(0);
     wandder_pshdr_t *hdrspace = NULL;
     wandder_pshdr_t **hdr = &hdrspace;
 
-    tv->tv_sec = 0x2E2285C0;
-    tv->tv_usec = 0x1337;
-    res_der = encode_etsi_ipcc(encoder, preencoded, 123456, 654321, tv, ipcontents, iplen, dir, hdr);
+    res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
     wandder_release_encoded_result(encoder, res_der);
     res_der = NULL;
     if ((*hdr)->totallen == sizeof trueResult){
         for (int i = 0; i< sizeof trueResult; i++){
-            if (trueResult[i] != *(uint8_t *)((*hdr)->block_0->buf+i)){
-                PRINTBUF((*hdr)->block_0->buf, (*hdr)->totallen)
+            if (trueResult[i] != *(uint8_t *)((*hdr)->block_0.buf+i)){
+                PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
                 assert(0);
             }
         }
     } else {
-        PRINTBUF((*hdr)->block_0->buf, (*hdr)->totallen)
+        PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
         assert(0);
     }    
     printf("Passed test.\n");
 
     res_der = NULL;
-    free((*hdr)->block_0->buf);
-    free((*hdr)->block_0);
+    free((*hdr)->block_0.buf);
     free(*hdr);
     *hdr = NULL;
-    cin = rand() >> (rand() % 64);
-    seqno = rand() >> (rand() % 64);
-    gettimeofday(tv, NULL);
     
     int runtimes = strtod(argv[1],NULL);
-    
-    TIMEFUNC(
-        {
-            res_der = encode_etsi_ipcc(encoder,
-                preencoded, cin, seqno,
-                tv, ipcontents, iplen, dir, hdr);
-        },
-        {
-            wandder_release_encoded_result(encoder, res_der);
-            res_der = NULL;
-            free((*hdr)->block_0->buf);
-            free((*hdr)->block_0);
-            free(*hdr);
-            *hdr = NULL;
-            cin = rand() >> (rand() % 64);
-            seqno = rand() >> (rand() % 64);
-            gettimeofday(tv, NULL);
-        }, 
-        runtimes)
+    if (runtimes != 0){    
+        TIMEFUNC(
+            {   //function to time
+                res_der = encode_etsi_ipcc(encoder,
+                    preencoded, cin, seqno,
+                    &tv, ipcontents, iplen, dir, hdr);
+            },
+            {   //reset code
+                wandder_release_encoded_result(encoder, res_der);
+                res_der = NULL;
+                free((*hdr)->block_0.buf);
+                free(*hdr);
+                *hdr = NULL;
+                cin = rand() >> (rand() % 64);
+                seqno = rand() >> (rand() % 64);
+                gettimeofday(&tv, NULL);
+            }, 
+            runtimes)
 
-    gettimeofday(tv, NULL);
-    res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, tv, ipcontents, iplen, dir, hdr);
-    wandder_release_encoded_result(encoder, res_der);
-    res_der = NULL;
-    cin = rand() >> (rand() % 64);
-    seqno = rand() >> (rand() % 64);
-    gettimeofday(tv, NULL);
+        gettimeofday(&tv, NULL);
+        res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
+        wandder_release_encoded_result(encoder, res_der);
+        res_der = NULL;
+        cin = rand() >> (rand() % 64);
+        seqno = rand() >> (rand() % 64);
+        gettimeofday(&tv, NULL);
 
-    TIMEFUNC(
-        {
-            res_der = encode_etsi_ipcc(encoder,
-                preencoded, cin, seqno,
-                tv, ipcontents, iplen, dir, hdr);
-        },
-        {
-            //if (res_der->len != 62) printf("Length:%d\n", res_der->len);
-            wandder_release_encoded_result(encoder, res_der);
-            res_der = NULL;
+        TIMEFUNC(
+            {   //function to time
+                res_der = encode_etsi_ipcc(encoder,
+                    preencoded, cin, seqno,
+                    &tv, ipcontents, iplen, dir, hdr);
+            },
+            {   //reset code
+                wandder_release_encoded_result(encoder, res_der);
+                res_der = NULL;
+                cin = rand() >> (rand() % 64);
+                seqno = rand() >> (rand() % 64);
+                gettimeofday(&tv, NULL);
+            }, 
+            runtimes)
 
-
-
-            cin = rand() >> (rand() % 64);
-            seqno = rand() >> (rand() % 64);
-            gettimeofday(tv, NULL);
-        }, 
-        runtimes)
+        free((*hdr)->block_0.buf);
+        free(*hdr);
+    }
 
     etsili_clear_preencoded_fields(preencoded);
-    free(preencoded);
     free_wandder_encoder(encoder);
-    free(details->liid);
-    free(details->authcc);
-    free(details->delivcc);
-    free(details->intpointid);
-    free(details->operatorid);
-    free(details->networkelemid);
-    free(details);
-    free(ipcontents);
-    free(tv);
-    free((*hdr)->block_0->buf);
-    free((*hdr)->block_0);
-    free(*hdr);
-    free(buf);
-    buf = NULL;
 
     return 0;
 }

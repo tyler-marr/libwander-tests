@@ -7,3 +7,5 @@ libwandder/simple-count
 libwandder/vgcore*
 openli/resultlog.log
 
+libwandder/-p
+*.bin
