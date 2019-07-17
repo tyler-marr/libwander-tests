@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <assert.h>
 
 
 #include <unistd.h>
@@ -26,22 +27,29 @@
 #define END_ENCODED_SEQUENCE(enc, x) \
         wandder_encode_endseq_repeat(enc, x);
 
-#define PRINTBUF(ptr,len) for (int uniuqevari = 0; uniuqevari< len; uniuqevari++)printf("%02x ",*(ptr+uniuqevari));
+#define PRINTBUF(ptr,len) for (int uniuqevari = 0; uniuqevari< len; uniuqevari++)\
+            printf("%02x ",*(uint8_t *)(ptr+uniuqevari));\
+        printf("\n");
 
-#define TIMEFUNC(func, reset, num) {\
-    struct timespec start, end; \
-    uint64_t delta_us = 0; \
-    uint64_t total = 0; \
-    for (int uniuqevari = 0; uniuqevari < num; uniuqevari++){\
-        clock_gettime(CLOCK_MONOTONIC_RAW, &start); \
-        func \
-        clock_gettime(CLOCK_MONOTONIC_RAW, &end); \
-        reset \
-        delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec); \
-        total += delta_us; \
-        /* printf("took %lu\n",delta_us);*/\
-    }\
-    printf("took avg:%lu\n",total/num);}
+#define TIMEFUNC(func, reset, num) {                                                        \
+    struct timespec start, end;                                                             \
+    uint64_t delta_us = 0;                                                                  \
+    uint64_t samples = 0;                                                                   \
+    uint64_t total = 0;                                                                     \
+    for (int uniuqevari = 0; uniuqevari < num; uniuqevari++){                               \
+        clock_gettime(CLOCK_MONOTONIC_RAW, &start);                                         \
+        func                                                                                \
+        clock_gettime(CLOCK_MONOTONIC_RAW, &end);                                           \
+        reset                                                                               \
+        delta_us = (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec);\
+        total += delta_us;                                                                  \
+        samples++;                                                                          \
+        if (total > (UINT32_MAX)){                                                          \
+            total = total/samples;                                                          \
+            samples = 1;                                                                    \
+        }                                                                                   \
+    }                                                                                       \
+    printf("took avg:%6lu over %d samples\n",total/samples, num);}
 
 char* MALSTR(char * s){
     char * ret = malloc(strlen(s) + 1); 
@@ -54,81 +62,78 @@ uint8_t etsi_ipccoid[4] = {0x05, 0x03, 0x0a, 0x02};
 uint8_t etsi_ipirioid[4] = {0x05, 0x03, 0x0a, 0x01};
 uint8_t etsi_ipmmccoid[4] = {0x05, 0x05, 0x06, 0x02};
 uint8_t etsi_ipmmirioid[4] = {0x05, 0x05, 0x06, 0x01};
+uint8_t trueResult[] = {
+            0xa1, 0x80, 0x80, 0x08, 0x04, 0x00, 0x02, 0x02, 
+            0x05, 0x01, 0x11, 0x00, 0x81, 0x04, 0x6c, 0x69, 
+            0x69, 0x64, 0x82, 0x06, 0x61, 0x75, 0x74, 0x68,
+            0x63, 0x63, 0xa3, 0x80, 0xa0, 0x80, 0x80, 0x0a,
+            0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72,
+            0x69, 0x64, 0x81, 0x0d, 0x6e, 0x65, 0x74, 0x77,
+            0x6f, 0x72, 0x6b, 0x65, 0x6c, 0x65, 0x6d, 0x69,
+            0x64, 0x00, 0x00, 0x81, 0x85, 0x00, 0x00, 0x00,
+            0x00, 0x03, 0x01, 0xe2, 0x40, 0x82, 0x07, 0x64,
+            0x65, 0x6c, 0x69, 0x76, 0x63, 0x63, 0x00, 0x00,
+            0x84, 0x85, 0x00, 0x00, 0x00, 0x00, 0x03, 0x09,
+            0xfb, 0xf1, 0x86, 0x0a, 0x69, 0x6e, 0x74, 0x70,
+            0x6f, 0x69, 0x6e, 0x74, 0x69, 0x64, 0xa7, 0x80,
+            0x80, 0x84, 0x00, 0x00, 0x00, 0x04, 0x2e, 0x22,
+            0x85, 0xc0, 0x81, 0x86, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x02, 0x13, 0x37, 0x00, 0x00, 0x88, 0x01,
+            0x01, 0x00, 0x00};
 
 typedef struct wandder_pshdr {
     uint32_t totallen;
 
-    uint8_t * block_0;
-    uint32_t block_0_len;
+    wandder_buf_t *block_0;
 
-    uint8_t * cin;
-    uint32_t cin_len;
+    wandder_buf_t *cin;
 
-    uint8_t * block_1;
-    uint32_t block_1_len;
+    wandder_buf_t *block_1;
 
-    uint8_t * seqno;
-    uint32_t seqno_len;
+    wandder_buf_t *seqno;
 
-    uint8_t * block_2;
-    uint32_t block_2_len;
+    wandder_buf_t *block_2;
 
-    uint8_t * time;
-    uint32_t time_len;
+    wandder_buf_t *sec;
 
-    uint8_t * block_3;
-    uint32_t block_3_len;
+    wandder_buf_t *usec;
+
+    wandder_buf_t *block_3;
 
 } wandder_pshdr_t;
 
 void wandder_pshdr_update(int64_t cin,
         int64_t seqno, struct timeval *tv, wandder_pshdr_t * hdr) {
 
-   //reencode each field 
+    uint32_t ret = 0;
 
-   //and copy into old location 
+    ret = ber_rebuild_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        1, 
+        &(cin), 
+        sizeof(int64_t),
+        hdr->cin->buf);
 
-   //SHOULD BE EXACTLY THE SAME SIZE
+    ret = ber_rebuild_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        4, 
+        &(seqno), 
+        sizeof(int64_t),
+        hdr->seqno->buf);
 
-    wandber_encoder_t *enc_ber = init_wandber_encoder();
-    wandber_encoded_result_t *res_ber;
+    ret = ber_rebuild_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        0, 
+        &(tv->tv_sec), 
+        sizeof(tv->tv_sec),
+        hdr->sec->buf);
 
-    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
-            sizeof(tv->tv_sec));
-    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(tv->tv_usec),
-            sizeof(tv->tv_usec));
-    res_ber = wandber_encode_finish(enc_ber);
-    memcpy(hdr->time, res_ber->buf, res_ber->length);
-    wandber_encoder_reset(enc_ber);
-    free(res_ber->buf);
-    free(res_ber);
-    res_ber = NULL;
-
-
-    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(cin),
-            sizeof(int64_t));
-    res_ber = wandber_encode_finish(enc_ber);
-    memcpy(hdr->cin, res_ber->buf, res_ber->length);
-    wandber_encoder_reset(enc_ber);
-    free(res_ber->buf);
-    free(res_ber);
-    res_ber = NULL;
-
-
-    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(seqno),
-            sizeof(int64_t));
-    res_ber = wandber_encode_finish(enc_ber);
-    memcpy(hdr->seqno, res_ber->buf, res_ber->length);
-    wandber_encoder_reset(enc_ber);
-    free(res_ber->buf);
-    free(res_ber);
-    res_ber = NULL;
-
-    free_wandber_encoder(enc_ber);
+    ret = ber_rebuild_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        1, 
+        &(tv->tv_usec), 
+        sizeof(tv->tv_usec),
+        hdr->usec->buf);
 }
 
 
@@ -177,11 +182,28 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
      * CIN, seqno and tv will change for each record, so I've made them
      * into separate parameters.
      */
-
+    //uses an array to only need a single call to calloc
     wandder_pshdr_t *header = malloc(sizeof(wandder_pshdr_t));
+    // header->block_0 = calloc(sizeof (wandder_buf_t), 8);
+    // header->cin     = &header->block_0[1];
+    // header->block_1 = &header->block_0[2];
+    // header->seqno   = &header->block_0[3];
+    // header->block_2 = &header->block_0[4];
+    // header->sec     = &header->block_0[5];
+    // header->usec    = &header->block_0[6];
+    // header->block_3 = &header->block_0[7];
 
+    header->block_0 = calloc(sizeof (wandder_buf_t), 1);
+    header->cin     = calloc(sizeof (wandder_buf_t), 1);
+    header->block_1 = calloc(sizeof (wandder_buf_t), 1); 
+    header->seqno   = calloc(sizeof (wandder_buf_t), 1);
+    header->block_2 = calloc(sizeof (wandder_buf_t), 1);
+    header->sec     = calloc(sizeof (wandder_buf_t), 1);
+    header->usec    = calloc(sizeof (wandder_buf_t), 1);
+    header->block_3 = calloc(sizeof (wandder_buf_t), 1);
 
     uint8_t *freetemp;
+    uint32_t ret;
 
     wandber_encoded_result_t *res_ber;  
 
@@ -205,40 +227,57 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     
     res_ber = wandber_encode_finish(enc_ber);
 
-    header->block_0 = res_ber->buf;
-    header->block_0_len = res_ber->length;
+    header->block_0->buf = res_ber->buf;
+    header->block_0->len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
     //////////////////////////////////////////////////////////////// cin
-    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(cin),
-            sizeof(int64_t));
-    res_ber = wandber_encode_finish(enc_ber);
+    // wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
+    //         WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(cin),
+    //         sizeof(int64_t));
+    // res_ber = wandber_encode_finish(enc_ber);
+    // header->cin->buf = res_ber->buf;
+    // header->cin->len = res_ber->length;
+    // free(res_ber);
+    // res_ber = NULL;
 
-    header->cin = res_ber->buf;
-    header->cin_len = res_ber->length;
-    free(res_ber);
-    res_ber = NULL;
+    ret = ber_create_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        1, 
+        &(cin), 
+        sizeof(int64_t),
+        header->cin);
+    header->cin->len = ret;  
+    
     //////////////////////////////////////////////////////////////// block 1
     jobarray[0] = &(precomputed[OPENLI_PREENCODE_DELIVCC]);
     wandber_encode_next_preencoded(enc_ber, jobarray, 1);
     wandber_encode_endseq_repeat(enc_ber, 1);
     res_ber = wandber_encode_finish(enc_ber); 
 
-    header->block_1 = res_ber->buf;
-    header->block_1_len = res_ber->length;
+    header->block_1->buf = res_ber->buf;
+    header->block_1->len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
     //////////////////////////////////////////////////////////////// seqno
-    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 4, &(seqno),
-            sizeof(int64_t));
-    res_ber = wandber_encode_finish(enc_ber); 
+    // wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
+    //         WANDDER_CLASS_CONTEXT_PRIMITIVE, 4, &(seqno),
+    //         sizeof(int64_t));
+    // res_ber = wandber_encode_finish(enc_ber); 
 
-    header->seqno = res_ber->buf;
-    header->seqno_len = res_ber->length;
-    free(res_ber);
-    res_ber = NULL;
+    // header->seqno->buf = res_ber->buf;
+    // header->seqno->len = res_ber->length;
+    // free(res_ber);
+    // res_ber = NULL;
+
+    ret = ber_create_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        4, 
+        &(seqno), 
+        sizeof(int64_t),
+        header->seqno);
+    header->seqno->len = ret;
+
     //////////////////////////////////////////////////////////////// block 2
     if (precomputed[OPENLI_PREENCODE_INTPOINTID].valspace) {
         jobarray[0] = &(precomputed[OPENLI_PREENCODE_INTPOINTID]);
@@ -250,24 +289,46 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     }
     res_ber = wandber_encode_finish(enc_ber);
 
-    header->block_2 = res_ber->buf;
-    header->block_2_len = res_ber->length;
+    header->block_2->buf = res_ber->buf;
+    header->block_2->len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
     //////////////////////////////////////////////////////////////// tv_utimesec
-    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
-            sizeof(tv->tv_sec));
-    wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(tv->tv_usec),
-            sizeof(tv->tv_usec));
-    
-    res_ber = wandber_encode_finish(enc_ber);
+    // wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
+    //         WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
+    //         sizeof(tv->tv_sec));
+    // res_ber = wandber_encode_finish(enc_ber);
+    // header->sec->buf = res_ber->buf;
+    // header->sec->len = res_ber->length;
+    // free(res_ber);
+    // res_ber = NULL;
 
-    header->time = res_ber->buf;
-    header->time_len = res_ber->length;
-    free(res_ber);
-    res_ber = NULL;
+    // wandber_encode_next(enc_ber, WANDDER_TAG_INTEGER,
+    //         WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(tv->tv_usec),
+    //         sizeof(tv->tv_usec));
+    // res_ber = wandber_encode_finish(enc_ber);
+    // header->usec->buf = res_ber->buf;
+    // header->usec->len = res_ber->length;
+    // free(res_ber);
+    // res_ber = NULL;
+
+
+    ret = ber_create_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        0, 
+        &(tv->tv_sec), 
+        sizeof(tv->tv_sec),
+        header->sec);
+    header->sec->len = ret;
+
+    ret = ber_create_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        1, 
+        &(tv->tv_usec), 
+        sizeof(tv->tv_usec),
+        header->usec);
+    header->usec->len += ret;
+
     //////////////////////////////////////////////////////////////// block 3
     wandber_encode_endseq_repeat(enc_ber, 1);
 
@@ -276,74 +337,83 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     wandber_encode_endseq_repeat(enc_ber, 1);
     res_ber = wandber_encode_finish(enc_ber);
 
-    header->block_3 = res_ber->buf;
-    header->block_3_len = res_ber->length;
+    header->block_3->buf = res_ber->buf;
+    header->block_3->len = res_ber->length;
     free(res_ber);
     res_ber = NULL;
     //////////////////////////////////////////////////////////////// end
     free_wandber_encoder(enc_ber);
 
+
+    //this some bullshit
     header->totallen = 
-            header->block_0_len +
-            header->cin_len + 
-            header->block_1_len +
-            header->seqno_len +
-            header->block_2_len +
-            header->time_len +
-            header->block_3_len;
-    freetemp = realloc(header->block_0, header->totallen);
-    header->block_0 = freetemp;
+            header->block_0->len +
+            header->cin->len + 
+            header->block_1->len +
+            header->seqno->len +
+            header->block_2->len +
+            header->sec->len +
+            header->usec->len +
+            header->block_3->len;
+    freetemp = realloc(header->block_0->buf, header->totallen);
+    header->block_0->buf = freetemp;
 
 
     freetemp = memcpy(
-            header->block_0 + 
-            header->block_0_len, 
-            header->cin, 
-            header->cin_len);
-    free(header->cin);
-    header->cin = freetemp;
+            header->block_0->buf + 
+            header->block_0->len, 
+            header->cin->buf, 
+            header->cin->len);
+    free(header->cin->buf);
+    header->cin->buf = freetemp;
 
     freetemp = memcpy(
-                header->cin + 
-                header->cin_len, 
-                header->block_1, 
-                header->block_1_len);
-    free(header->block_1);
-    header->block_1 = freetemp;
+                header->cin->buf + 
+                header->cin->len, 
+                header->block_1->buf, 
+                header->block_1->len);
+    free(header->block_1->buf);
+    header->block_1->buf = freetemp;
 
     freetemp = memcpy(
-            header->block_1 + 
-            header->block_1_len, 
-            header->seqno, 
-            header->seqno_len);
-    free(header->seqno);
-    header->seqno = freetemp;
+            header->block_1->buf + 
+            header->block_1->len, 
+            header->seqno->buf, 
+            header->seqno->len);
+    free(header->seqno->buf);
+    header->seqno->buf = freetemp;
 
     freetemp = memcpy(
-            header->seqno + 
-            header->seqno_len, 
-            header->block_2, 
-            header->block_2_len);
-    free(header->block_2);
-    header->block_2 = freetemp;
+            header->seqno->buf + 
+            header->seqno->len, 
+            header->block_2->buf, 
+            header->block_2->len);
+    free(header->block_2->buf);
+    header->block_2->buf = freetemp;
 
     freetemp = memcpy(
-            header->block_2 + 
-            header->block_2_len, 
-            header->time, 
-            header->time_len);
-    free(header->time);
-    header->time = freetemp;
+            header->block_2->buf + 
+            header->block_2->len, 
+            header->sec->buf, 
+            header->sec->len);
+    free(header->sec->buf);
+    header->sec->buf = freetemp;
 
     freetemp = memcpy(
-            header->time + 
-            header->time_len, 
-            header->block_3, 
-            header->block_3_len);
-    free(header->block_3);
-    header->block_3 = freetemp;
+            header->sec->buf + 
+            header->sec->len, 
+            header->usec->buf, 
+            header->usec->len);
+    free(header->usec->buf);
+    header->usec->buf = freetemp;
 
-
+    freetemp = memcpy(
+            header->usec->buf + 
+            header->usec->len, 
+            header->block_3->buf, 
+            header->block_3->len);
+    free(header->block_3->buf);
+    header->block_3->buf = freetemp;
  
     // printf("TOTAL:\n");
     // PRINTBUF(header->block_0, header->block_0_len)
@@ -356,7 +426,9 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     // printf("\n");
     // PRINTBUF(header->block_2, header->block_2_len)
     // printf("\n");
-    // PRINTBUF(header->time, header->time_len)
+    // PRINTBUF(header->sec, header->time_len)
+    // printf("\n");
+    // PRINTBUF(header->usec, header->time_len)
     // printf("\n");
     // PRINTBUF(header->block_3, header->block_3_len)
     // printf("\n");
@@ -676,7 +748,8 @@ wandder_encoded_result_t *encode_etsi_ipcc(wandder_encoder_t *encoder,
     // printf("\n");
     
     encode_ipcc_body(encoder, precomputed, ipcontents, iplen, dir);
-    return wandder_encode_finish(encoder);
+    wandder_encoded_result_t * res = wandder_encode_finish(encoder);
+    return res;
 
 }
 
@@ -737,11 +810,34 @@ int main(int argc, char *argv[])
     wandder_pshdr_t *hdrspace = NULL;
     wandder_pshdr_t **hdr = &hdrspace;
 
-    //wandder_pshdr_t * hdr = init_pshdr_pc(preencoded, cin, seqno, tv);
+    tv->tv_sec = 0x2E2285C0;
+    tv->tv_usec = 0x1337;
+    res_der = encode_etsi_ipcc(encoder, preencoded, 123456, 654321, tv, ipcontents, iplen, dir, hdr);
+    wandder_release_encoded_result(encoder, res_der);
+    res_der = NULL;
+    if ((*hdr)->totallen == sizeof trueResult){
+        for (int i = 0; i< sizeof trueResult; i++){
+            if (trueResult[i] != *(uint8_t *)((*hdr)->block_0->buf+i)){
+                PRINTBUF((*hdr)->block_0->buf, (*hdr)->totallen)
+                assert(0);
+            }
+        }
+    } else {
+        PRINTBUF((*hdr)->block_0->buf, (*hdr)->totallen)
+        assert(0);
+    }    
+    printf("Passed test.\n");
 
+    res_der = NULL;
+    free((*hdr)->block_0->buf);
+    free((*hdr)->block_0);
+    free(*hdr);
+    *hdr = NULL;
+    cin = rand() >> (rand() % 64);
+    seqno = rand() >> (rand() % 64);
+    gettimeofday(tv, NULL);
     
-    
-    int runtimes = 10000;
+    int runtimes = strtod(argv[1],NULL);
     
     TIMEFUNC(
         {
@@ -750,9 +846,9 @@ int main(int argc, char *argv[])
                 tv, ipcontents, iplen, dir, hdr);
         },
         {
-            if (res_der->len != 62) printf("Length:%d\n", res_der->len);
             wandder_release_encoded_result(encoder, res_der);
             res_der = NULL;
+            free((*hdr)->block_0->buf);
             free((*hdr)->block_0);
             free(*hdr);
             *hdr = NULL;
@@ -766,6 +862,9 @@ int main(int argc, char *argv[])
     res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, tv, ipcontents, iplen, dir, hdr);
     wandder_release_encoded_result(encoder, res_der);
     res_der = NULL;
+    cin = rand() >> (rand() % 64);
+    seqno = rand() >> (rand() % 64);
+    gettimeofday(tv, NULL);
 
     TIMEFUNC(
         {
@@ -774,7 +873,7 @@ int main(int argc, char *argv[])
                 tv, ipcontents, iplen, dir, hdr);
         },
         {
-            if (res_der->len != 62) printf("Length:%d\n", res_der->len);
+            //if (res_der->len != 62) printf("Length:%d\n", res_der->len);
             wandder_release_encoded_result(encoder, res_der);
             res_der = NULL;
 
@@ -785,7 +884,6 @@ int main(int argc, char *argv[])
             gettimeofday(tv, NULL);
         }, 
         runtimes)
-
 
     etsili_clear_preencoded_fields(preencoded);
     free(preencoded);
@@ -799,6 +897,7 @@ int main(int argc, char *argv[])
     free(details);
     free(ipcontents);
     free(tv);
+    free((*hdr)->block_0->buf);
     free((*hdr)->block_0);
     free(*hdr);
     free(buf);
