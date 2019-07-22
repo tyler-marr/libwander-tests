@@ -27,6 +27,8 @@
 #define END_ENCODED_SEQUENCE(enc, x) \
         wandder_encode_endseq_repeat(enc, x);
 
+#define MEMCPYPREENCODE(ptr, itembuf) {memcpy(ptr, itembuf->buf, itembuf->len); ptr+=itembuf->len;}
+
 #define PRINTBUF(ptr,len) for (int uniuqevari = 0; uniuqevari< len; uniuqevari++)\
             printf("%02x ",*(uint8_t *)(ptr+uniuqevari));\
         printf("\n");
@@ -370,6 +372,125 @@ static inline wandder_pshdr_t * init_pshdr_pc(wandder_encode_job_t *precomputed,
     free(header->block_3.buf);
     header->block_3.buf = freetemp;
  
+    return header;
+}
+
+static inline wandder_pshdr_t * init_pshdr_pc_ber(wandder_buf_t **precomputed, int64_t cin,
+        int64_t seqno, struct timeval *tv) {
+
+    /* hdrdata should be pretty static for each ETSI LI record, so
+     * you can populate it once and repeatedly use it.
+     * CIN, seqno and tv will change for each record, so I've made them
+     * into separate parameters.
+     */
+    wandder_pshdr_t *header = malloc(sizeof(wandder_pshdr_t));
+    uint8_t *freetemp;
+    uint32_t ret;
+    wandber_encoder_t *enc_ber = init_wandber_encoder();
+    wandder_encode_job_t *jobarray[9];
+
+    uint32_t totallen = 
+        precomputed[OPENLI_PREENCODE_CSEQUENCE_1]->len+
+        precomputed[OPENLI_PREENCODE_PSDOMAINID]->len+
+        precomputed[OPENLI_PREENCODE_LIID]->len+
+        precomputed[OPENLI_PREENCODE_AUTHCC]->len+
+        precomputed[OPENLI_PREENCODE_CSEQUENCE_3]->len+
+        precomputed[OPENLI_PREENCODE_CSEQUENCE_0]->len+
+        precomputed[OPENLI_PREENCODE_OPERATORID]->len+
+        precomputed[OPENLI_PREENCODE_NETWORKELEMID]->len+
+        2 + //endseq
+        9 + //precomputed[]->len+//cin integer size
+        precomputed[OPENLI_PREENCODE_DELIVCC]->len+
+        2 + //endseq
+        9 +//precomputed[]->len+//seqno integer size
+        (
+            (precomputed[OPENLI_PREENCODE_INTPOINTID]) ? 
+                (
+                    precomputed[OPENLI_PREENCODE_INTPOINTID]->len +
+                    precomputed[OPENLI_PREENCODE_CSEQUENCE_7]->len
+                ): 
+                (
+                    precomputed[OPENLI_PREENCODE_CSEQUENCE_7]->len
+                ) 
+        )+ 
+        9 + //precomputed[]->len+//sec integer size
+        9 + //precomputed[]->len+//usec integer size
+        2 +
+        precomputed[OPENLI_PREENCODE_TVCLASS]->len+
+        2;
+
+
+    uint8_t *ptr = malloc(totallen);
+    header->totallen = totallen;
+
+
+    //////////////////////////////////////////////////////////////// block 0
+    header->block_0.buf = ptr;
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_CSEQUENCE_1]);
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_PSDOMAINID]);
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_LIID]);
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_AUTHCC]);
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_CSEQUENCE_3]);
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_CSEQUENCE_0]);
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_OPERATORID]);
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_NETWORKELEMID]);
+    ptr+=2; //endseq
+    header->block_0.len = ((void *)ptr) - header->block_0.buf;
+    //////////////////////////////////////////////////////////////// cin
+    header->cin.buf = ptr;
+    ptr += ber_rebuild_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        1, 
+        &(cin), 
+        sizeof(int64_t),
+        header->cin.buf);
+    header->cin.len = ((void *)ptr) - header->cin.buf;
+    //////////////////////////////////////////////////////////////// block 1
+    header->block_1.buf = ptr;
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_DELIVCC]);
+    ptr+= 2;//endseq
+    header->block_1.len = ((void *)ptr) - header->block_1.buf;
+    //////////////////////////////////////////////////////////////// seqno
+    header->seqno.buf = ptr;
+    ptr+= ber_rebuild_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        4, 
+        &(seqno), 
+        sizeof(int64_t),
+        header->seqno.buf);
+    header->seqno.len = ((void *)ptr) - header->seqno.buf;
+    //////////////////////////////////////////////////////////////// block 2
+    header->block_2.buf = ptr;
+    if (precomputed[OPENLI_PREENCODE_INTPOINTID]){
+        MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_INTPOINTID]);
+    }
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_CSEQUENCE_7]);
+    header->block_2.len = ((void *)ptr) - header->block_2.buf;
+    //////////////////////////////////////////////////////////////// sec
+    header->sec.buf = ptr;
+    ptr+= ber_rebuild_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        0, 
+        &(tv->tv_sec), 
+        sizeof(tv->tv_sec),
+        header->sec.buf);
+    header->sec.len = ((void *)ptr) - header->sec.buf;
+    //////////////////////////////////////////////////////////////// usec
+    header->usec.buf = ptr;
+    ptr+= ber_rebuild_integer(
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        1, 
+        &(tv->tv_usec), 
+        sizeof(tv->tv_usec),
+        header->usec.buf);
+    header->usec.len = ((void *)ptr) - header->usec.buf;
+    //////////////////////////////////////////////////////////////// block 3
+    header->block_3.buf = ptr;
+    ptr+=2;//endseq
+    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_TVCLASS]);
+    ptr+=2;//endseq
+    header->block_3.len = ((void *)ptr) - header->block_3.buf;
+
     return header;
 }
 
@@ -859,6 +980,33 @@ wandder_encoded_result_t *encode_etsi_ipcc(wandder_encoder_t *encoder,
     return res;
 }
 
+wandder_encoded_result_t *encode_etsi_ipcc_ber(
+        wandder_buf_t **precomputed, int64_t cin, int64_t seqno,
+        struct timeval *tv, void *ipcontents, uint32_t iplen, uint8_t dir,
+        wandder_pshdr_t **hdr) {
+
+    if (*hdr){
+        wandder_pshdr_update(cin, seqno, tv, *hdr);
+    } else {
+        *hdr = init_pshdr_pc_ber(precomputed, cin, seqno, tv);
+    }
+    
+    printf("\n");
+    PRINTBUF((*hdr)->block_0.buf, (*hdr)->block_0.len)
+    PRINTBUF((*hdr)->cin.buf, (*hdr)->cin.len)
+    PRINTBUF((*hdr)->block_1.buf, (*hdr)->block_1.len)
+    PRINTBUF((*hdr)->seqno.buf, (*hdr)->seqno.len)
+    PRINTBUF((*hdr)->block_2.buf, (*hdr)->block_2.len)
+    PRINTBUF((*hdr)->sec.buf, (*hdr)->sec.len)
+    PRINTBUF((*hdr)->usec.buf, (*hdr)->usec.len)
+    PRINTBUF((*hdr)->block_3.buf, (*hdr)->block_3.len)
+    printf("\n");
+    PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
+    //encode_ipcc_body(encoder, precomputed, ipcontents, iplen, dir);
+    //wandder_encoded_result_t * res = wandder_encode_finish(encoder);
+    return NULL;
+}
+
 int main(int argc, char *argv[])
 {
     
@@ -879,6 +1027,7 @@ int main(int argc, char *argv[])
 
     wandder_encoder_t *encoder = init_wandder_encoder();
     wandder_encoded_result_t *res_der;
+    wandber_encoded_result_t *res_ber;
     
     int64_t cin = 0xfeedbeef;
     int64_t seqno = 0xdead;
@@ -895,89 +1044,91 @@ int main(int argc, char *argv[])
     wandder_pshdr_t *hdrspace = NULL;
     wandder_pshdr_t **hdr = &hdrspace;
 
-    res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
-    if ((*hdr)->totallen == sizeof trueResult){
-        for (int i = 0; i < sizeof trueResult; i++){
-            if (trueResult[i] != *(uint8_t *)((*hdr)->block_0.buf+i)){
-                printf("elemetn : %d\n", i);
-                PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
-                assert(0);
-            }
-        }
-    } else {
-        PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
-        PRINTBUF(trueResult, sizeof trueResult);
-        assert(0);
-    }
-    if (res_der->len == sizeof ipcc_truth){
-        for (int i = 0; i< res_der->len; i++){
-            if (ipcc_truth[i] != *(uint8_t *)(res_der->encoded+i)){
-                printf("elemetn : %d\n", i);
-                PRINTBUF(res_der->encoded, res_der->len)
-                assert(0);
-            }
-        }
-    } else {
-        PRINTBUF(res_der->encoded, res_der->len)
-        assert(0);
-    }    
-    printf("Passed test.\n");
+    res_ber = encode_etsi_ipcc_ber(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
 
-    wandder_release_encoded_result(encoder, res_der);
-    res_der = NULL;
-    free((*hdr)->block_0.buf);
-    free(*hdr);
-    *hdr = NULL;
+    // res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
+    // if ((*hdr)->totallen == sizeof trueResult){
+    //     for (int i = 0; i < sizeof trueResult; i++){
+    //         if (trueResult[i] != *(uint8_t *)((*hdr)->block_0.buf+i)){
+    //             printf("elemetn : %d\n", i);
+    //             PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
+    //             assert(0);
+    //         }
+    //     }
+    // } else {
+    //     PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
+    //     PRINTBUF(trueResult, sizeof trueResult);
+    //     assert(0);
+    // }
+    // if (res_der->len == sizeof ipcc_truth){
+    //     for (int i = 0; i< res_der->len; i++){
+    //         if (ipcc_truth[i] != *(uint8_t *)(res_der->encoded+i)){
+    //             printf("elemetn : %d\n", i);
+    //             PRINTBUF(res_der->encoded, res_der->len)
+    //             assert(0);
+    //         }
+    //     }
+    // } else {
+    //     PRINTBUF(res_der->encoded, res_der->len)
+    //     assert(0);
+    // }    
+    // printf("Passed test.\n");
+
+    // wandder_release_encoded_result(encoder, res_der);
+    // res_der = NULL;
+    // free((*hdr)->block_0.buf);
+    // free(*hdr);
+    // *hdr = NULL;
     
-    int runtimes = strtod(argv[1],NULL);
-    if (runtimes != 0){    
-        TIMEFUNC(
-            {   //function to time
-                res_der = encode_etsi_ipcc(encoder,
-                    preencoded, cin, seqno,
-                    &tv, ipcontents, iplen, dir, hdr);
-            },
-            {   //reset code
-                wandder_release_encoded_result(encoder, res_der);
-                res_der = NULL;
-                free((*hdr)->block_0.buf);
-                free(*hdr);
-                *hdr = NULL;
-                cin = rand() >> (rand() % 64);
-                seqno = rand() >> (rand() % 64);
-                gettimeofday(&tv, NULL);
-            }, 
-            runtimes)
+    // int runtimes = strtod(argv[1],NULL);
+    // if (runtimes != 0){    
+    //     TIMEFUNC(
+    //         {   //function to time
+    //             res_der = encode_etsi_ipcc(encoder,
+    //                 preencoded, cin, seqno,
+    //                 &tv, ipcontents, iplen, dir, hdr);
+    //         },
+    //         {   //reset code
+    //             wandder_release_encoded_result(encoder, res_der);
+    //             res_der = NULL;
+    //             free((*hdr)->block_0.buf);
+    //             free(*hdr);
+    //             *hdr = NULL;
+    //             cin = rand() >> (rand() % 64);
+    //             seqno = rand() >> (rand() % 64);
+    //             gettimeofday(&tv, NULL);
+    //         }, 
+    //         runtimes)
 
-        gettimeofday(&tv, NULL);
-        res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
-        wandder_release_encoded_result(encoder, res_der);
-        res_der = NULL;
-        cin = rand() >> (rand() % 64);
-        seqno = rand() >> (rand() % 64);
-        gettimeofday(&tv, NULL);
+    //     gettimeofday(&tv, NULL);
+    //     res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
+    //     wandder_release_encoded_result(encoder, res_der);
+    //     res_der = NULL;
+    //     cin = rand() >> (rand() % 64);
+    //     seqno = rand() >> (rand() % 64);
+    //     gettimeofday(&tv, NULL);
 
-        TIMEFUNC(
-            {   //function to time
-                res_der = encode_etsi_ipcc(encoder,
-                    preencoded, cin, seqno,
-                    &tv, ipcontents, iplen, dir, hdr);
-            },
-            {   //reset code
-                wandder_release_encoded_result(encoder, res_der);
-                res_der = NULL;
-                cin = rand() >> (rand() % 64);
-                seqno = rand() >> (rand() % 64);
-                gettimeofday(&tv, NULL);
-            }, 
-            runtimes)
+    //     TIMEFUNC(
+    //         {   //function to time
+    //             res_der = encode_etsi_ipcc(encoder,
+    //                 preencoded, cin, seqno,
+    //                 &tv, ipcontents, iplen, dir, hdr);
+    //         },
+    //         {   //reset code
+    //             wandder_release_encoded_result(encoder, res_der);
+    //             res_der = NULL;
+    //             cin = rand() >> (rand() % 64);
+    //             seqno = rand() >> (rand() % 64);
+    //             gettimeofday(&tv, NULL);
+    //         }, 
+    //         runtimes)
 
-        free((*hdr)->block_0.buf);
-        free(*hdr);
-    }
+    //     free((*hdr)->block_0.buf);
+    //     free(*hdr);
+    // }
 
-    etsili_clear_preencoded_fields(preencoded);
-    free_wandder_encoder(encoder);
+    // etsili_clear_preencoded_fields(preencoded);
+    // free_wandder_encoder(encoder);
 
     return 0;
 }
