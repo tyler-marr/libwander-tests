@@ -65,20 +65,20 @@ uint8_t trueResult[] = {
                         0x80, 0x0a, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x69, 0x64,
                         0x81, 0x0d, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x65, 0x6c, 0x65, 0x6d, 0x69, 0x64, 
                     0x00, 0x00, 
-                    0x81, 0x84, 0x00, 0x00, 0x00, 0x04, 0xfe, 0xed, 0xbe, 0xef, 
+                    0x81, 0x83, 0x00, 0x00, 0x04, 0xfe, 0xed, 0xbe, 0xef, 
                     0x82, 0x07, 0x64, 0x65, 0x6c, 0x69, 0x76, 0x63, 0x63, 
                 0x00, 0x00, 
-                0x84, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xde, 0xad,
+                0x84, 0x85, 0x00, 0x00, 0x00, 0x00, 0x02, 0xde, 0xad,
                 0x86, 0x0a, 0x69, 0x6e, 0x74, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x69, 0x64,
                 0xa7, 0x80,
-                    0x80, 0x84, 0x00, 0x00, 0x00, 0x04, 0x0b, 0xad, 0xca, 0xfe, 
-                    0x81, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x13, 0x37, 
+                    0x80, 0x83, 0x00, 0x00, 0x04, 0x0b, 0xad, 0xca, 0xfe, 
+                    0x81, 0x85, 0x00, 0x00, 0x00, 0x00, 0x02, 0x13, 0x37, 
                 0x00, 0x00,
                 0x88, 0x01, 0x01, 
             0x00, 0x00};
 /*
 [1] (8 elem)
-    [0] (8 byte) 0400020205011100
+    [0] (8 byte) 04 00 02 02 05 01 11 00
     [1] liid
     [2] authcc
     [3] (3 elem)
@@ -94,6 +94,19 @@ uint8_t trueResult[] = {
         [1] (2 byte) 1337
     [8] (1 byte) 01
   */
+
+uint8_t ipcc_truth[] = {
+        0xa2, 0x3c, 
+            0xa1, 0x3a, 
+                0x30, 0x38, 
+                    0x80, 0x01, 0x42, 
+                    0xa2, 0x33, 
+                        0xa2, 0x31, 
+                            0x80, 0x04, 0x05, 0x03, 0x0a, 0x02, 
+                            0xa1, 0x29, 
+                                0x80, 0x27, 
+                                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
 
 typedef struct wandder_pshdr {
     uint32_t totallen;
@@ -164,6 +177,7 @@ typedef enum {
     OPENLI_PREENCODE_DIRFROM,
     OPENLI_PREENCODE_DIRTO,
     OPENLI_PREENCODE_DIRUNKNOWN,
+    OPENLI_PREENCODE_INTEGERSPACE,
     OPENLI_PREENCODE_LAST
 
 } preencode_index_t;
@@ -364,45 +378,59 @@ static inline void encode_ipcc_body(wandder_encoder_t *encoder,
         uint8_t dir) {
 
     uint32_t dir32 = dir;
+    wandber_encoded_result_t *res_ber;  
+    wandber_encoder_t *enc_ber = init_wandber_encoder();
     wandder_encode_job_t *jobarray[8];
-    int nextjob = 0;
 
     jobarray[0] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_2]);
     jobarray[1] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_1]);
     jobarray[2] = &(precomputed[OPENLI_PREENCODE_USEQUENCE]);
 
+
+    wandder_encode_next_preencoded(encoder, jobarray, 3);
+
+    wandber_encode_next_preencoded(enc_ber, jobarray, 3);
+    res_ber = wandber_encode_finish(enc_ber); 
+    //save output from res_ber
+    free(res_ber->buf);
+    free(res_ber);
+    res_ber = NULL;
+
+
+
     if (dir == 0) {
         jobarray[3] = &(precomputed[OPENLI_PREENCODE_DIRFROM]);
-        nextjob = 4;
+        wandder_encode_next_preencoded(encoder, jobarray, 1);
     } else if (dir == 1) {
         jobarray[3] = &(precomputed[OPENLI_PREENCODE_DIRTO]);
-        nextjob = 4;
+        wandder_encode_next_preencoded(encoder, jobarray, 1);
     } else if (dir == 2) {
         jobarray[3] = &(precomputed[OPENLI_PREENCODE_DIRUNKNOWN]);
-        nextjob = 4;
+        wandder_encode_next_preencoded(encoder, jobarray, 1);
     } else {
-        wandder_encode_next_preencoded(encoder, jobarray, 4);
-        nextjob = 0;
         wandder_encode_next(encoder, WANDDER_TAG_ENUM,
                 WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &dir32,
                 sizeof(uint32_t));
     }
+    res_ber = wandber_encode_finish(enc_ber); 
+    //save output from res_ber
+    free(res_ber->buf);
+    free(res_ber);
+    res_ber = NULL;
 
-    jobarray[nextjob] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_2]);
-    nextjob ++;
-    jobarray[nextjob] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_2]);
-    nextjob ++;
-    jobarray[nextjob] = &(precomputed[OPENLI_PREENCODE_IPCCOID]);
-    nextjob ++;
-    jobarray[nextjob] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_1]);
-    nextjob ++;
+    jobarray[0] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_2]);
+    jobarray[1] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_2]);
+    jobarray[2] = &(precomputed[OPENLI_PREENCODE_IPCCOID]);
+    jobarray[3] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_1]);
 
-    wandder_encode_next_preencoded(encoder, jobarray, nextjob);
+    wandder_encode_next_preencoded(encoder, jobarray, 4);
 
     wandder_encode_next(encoder, WANDDER_TAG_IPPACKET,
             WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, ipcontent, iplen);
 
     END_ENCODED_SEQUENCE(encoder, 7);
+
+    free_wandber_encoder(enc_ber);
 
 }
 
@@ -582,13 +610,241 @@ void etsili_preencode_static_fields(
     wandder_encode_preencoded_value(p, &dirunk, sizeof(dirunk));
 
 }
+void etsili_preencode_static_fields_ber(
+        wandder_buf_t **pendarray, etsili_intercept_details_t *details) {
+
+    wandder_buf_t *p;
+    int tvclass = 1;
+    uint32_t dirin = 0, dirout = 1, dirunk = 2;
+
+    memset(pendarray, 0, sizeof(p) * OPENLI_PREENCODE_LAST);
+
+    pendarray[OPENLI_PREENCODE_USEQUENCE] = build_ber_field(
+            WANDDER_CLASS_UNIVERSAL_CONSTRUCT, 
+            WANDDER_TAG_SEQUENCE,
+            WANDDER_TAG_SEQUENCE,
+            NULL, 
+            0,
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_CSEQUENCE_0] =  build_ber_field(
+            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
+            0,
+            WANDDER_TAG_SEQUENCE,
+            NULL, 
+            0,
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_CSEQUENCE_1] =  build_ber_field(
+            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
+            1,
+            WANDDER_TAG_SEQUENCE,
+            NULL, 
+            0,
+            NULL,
+            0);
+
+
+    pendarray[OPENLI_PREENCODE_CSEQUENCE_2] =  build_ber_field(
+            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
+            2,
+            WANDDER_TAG_SEQUENCE,
+            NULL, 
+            0,
+            NULL,
+            0);
+
+
+    pendarray[OPENLI_PREENCODE_CSEQUENCE_3] =  build_ber_field(
+            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
+            3,
+            WANDDER_TAG_SEQUENCE,
+            NULL, 
+            0,
+            NULL,
+            0);
+
+
+    pendarray[OPENLI_PREENCODE_CSEQUENCE_7] =  build_ber_field(
+            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
+            7,
+            WANDDER_TAG_SEQUENCE,
+            NULL, 
+            0,
+            NULL,
+            0);
+
+
+    pendarray[OPENLI_PREENCODE_CSEQUENCE_11] =  build_ber_field(
+            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
+            11,
+            WANDDER_TAG_SEQUENCE,
+            NULL, 
+            0,
+            NULL,
+            0);
+
+
+    pendarray[OPENLI_PREENCODE_CSEQUENCE_12] =  build_ber_field(
+            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
+            12,
+            WANDDER_TAG_SEQUENCE,
+            NULL, 
+            0,
+            NULL,
+            0);
+
+
+    //TODO not 100% this is correct but i cant see anything wrong
+    pendarray[OPENLI_PREENCODE_PSDOMAINID] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0,
+            WANDDER_TAG_OID,
+            (uint8_t *)WANDDER_ETSILI_PSDOMAINID, 
+            sizeof WANDDER_ETSILI_PSDOMAINID,
+            NULL,
+            0);
+
+
+    pendarray[OPENLI_PREENCODE_LIID] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            1,
+            WANDDER_TAG_OCTETSTRING,
+            details->liid, 
+            strlen(details->liid),
+            NULL,
+            0);
+            
+    
+    pendarray[OPENLI_PREENCODE_AUTHCC] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            2,
+            WANDDER_TAG_OCTETSTRING,
+            details->authcc, 
+            strlen(details->authcc),
+            NULL,
+            0);
+    
+    pendarray[OPENLI_PREENCODE_OPERATORID] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0,
+            WANDDER_TAG_OCTETSTRING,
+            details->operatorid, 
+            strlen(details->operatorid),
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_NETWORKELEMID] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            1,
+            WANDDER_TAG_OCTETSTRING,
+            details->networkelemid, 
+            strlen(details->networkelemid),
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_DELIVCC] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            2,
+            WANDDER_TAG_OCTETSTRING,
+            details->delivcc, 
+            strlen(details->delivcc),
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_INTPOINTID] =  (details->intpointid) ? build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            6,
+            WANDDER_TAG_OCTETSTRING,
+            details->intpointid, 
+            strlen(details->intpointid),
+            NULL,
+            0) : NULL;
+
+    pendarray[OPENLI_PREENCODE_TVCLASS] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            8,
+            WANDDER_TAG_ENUM,
+            &tvclass, 
+            sizeof tvclass,
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_IPMMIRIOID] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0,
+            WANDDER_TAG_RELATIVEOID,
+            etsi_ipmmirioid, 
+            sizeof etsi_ipmmirioid,
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_IPCCOID] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0,
+            WANDDER_TAG_RELATIVEOID,
+            etsi_ipccoid, 
+            sizeof etsi_ipccoid,
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_IPIRIOID] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0,
+            WANDDER_TAG_RELATIVEOID,
+            etsi_ipirioid, 
+            sizeof etsi_ipirioid,
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_IPMMCCOID] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0,
+            WANDDER_TAG_RELATIVEOID,
+            etsi_ipmmccoid, 
+            sizeof etsi_ipmmccoid,
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_DIRFROM] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0,
+            WANDDER_TAG_ENUM,
+            &dirin, 
+            sizeof dirin,
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_DIRTO] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0,
+            WANDDER_TAG_ENUM,
+            &dirout, 
+            sizeof dirout,
+            NULL,
+            0);
+
+    pendarray[OPENLI_PREENCODE_DIRUNKNOWN] =  build_ber_field( 
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0,
+            WANDDER_TAG_ENUM,
+            &dirunk, 
+            sizeof dirunk,
+            NULL,
+            0);
+
+    for (int i = 0; i< OPENLI_PREENCODE_LAST -1; i++){
+        //printf("%2d: 0x", i);
+        PRINTBUF(pendarray[i]->buf, pendarray[i]->len);
+    }
+}
 
 wandder_encoded_result_t *encode_etsi_ipcc(wandder_encoder_t *encoder,
         wandder_encode_job_t *precomputed, int64_t cin, int64_t seqno,
         struct timeval *tv, void *ipcontents, uint32_t iplen, uint8_t dir,
         wandder_pshdr_t **hdr) {
-
-    reset_wandder_encoder(encoder);
 
     if (*hdr){
         wandder_pshdr_update(cin, seqno, tv, *hdr);
@@ -596,6 +852,8 @@ wandder_encoded_result_t *encode_etsi_ipcc(wandder_encoder_t *encoder,
         *hdr = init_pshdr_pc(precomputed, cin, seqno, tv);
     }
     
+
+    reset_wandder_encoder(encoder);
     encode_ipcc_body(encoder, precomputed, ipcontents, iplen, dir);
     wandder_encoded_result_t * res = wandder_encode_finish(encoder);
     return res;
@@ -603,7 +861,7 @@ wandder_encoded_result_t *encode_etsi_ipcc(wandder_encoder_t *encoder,
 
 int main(int argc, char *argv[])
 {
-    wandder_encode_job_t preencoded[OPENLI_PREENCODE_LAST];
+    
     etsili_intercept_details_t details;
     details.liid           = "liid"; 
     details.authcc         = "authcc";
@@ -611,7 +869,13 @@ int main(int argc, char *argv[])
     details.intpointid     = "intpointid";
     details.operatorid     = "operatorid";
     details.networkelemid  = "networkelemid";    
+
+    wandder_encode_job_t preencoded[OPENLI_PREENCODE_LAST];
     etsili_preencode_static_fields(preencoded, &details);
+
+
+    wandder_buf_t preencoded_ber[OPENLI_PREENCODE_LAST] = {0};
+    etsili_preencode_static_fields_ber(preencoded_ber, &details);
 
     wandder_encoder_t *encoder = init_wandder_encoder();
     wandder_encoded_result_t *res_der;
@@ -623,7 +887,7 @@ int main(int argc, char *argv[])
     tv.tv_usec = 0x1337;
     char* ipcontents = "this is the ippc body or the ipcontents";
     uint32_t iplen = strlen(ipcontents);
-    uint8_t dir = 0;
+    uint8_t dir = 0x42;
     
     
 
@@ -632,21 +896,34 @@ int main(int argc, char *argv[])
     wandder_pshdr_t **hdr = &hdrspace;
 
     res_der = encode_etsi_ipcc(encoder, preencoded, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
-    wandder_release_encoded_result(encoder, res_der);
-    res_der = NULL;
     if ((*hdr)->totallen == sizeof trueResult){
-        for (int i = 0; i< sizeof trueResult; i++){
+        for (int i = 0; i < sizeof trueResult; i++){
             if (trueResult[i] != *(uint8_t *)((*hdr)->block_0.buf+i)){
+                printf("elemetn : %d\n", i);
                 PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
                 assert(0);
             }
         }
     } else {
         PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
+        PRINTBUF(trueResult, sizeof trueResult);
+        assert(0);
+    }
+    if (res_der->len == sizeof ipcc_truth){
+        for (int i = 0; i< res_der->len; i++){
+            if (ipcc_truth[i] != *(uint8_t *)(res_der->encoded+i)){
+                printf("elemetn : %d\n", i);
+                PRINTBUF(res_der->encoded, res_der->len)
+                assert(0);
+            }
+        }
+    } else {
+        PRINTBUF(res_der->encoded, res_der->len)
         assert(0);
     }    
     printf("Passed test.\n");
 
+    wandder_release_encoded_result(encoder, res_der);
     res_der = NULL;
     free((*hdr)->block_0.buf);
     free(*hdr);
