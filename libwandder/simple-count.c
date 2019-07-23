@@ -55,10 +55,7 @@
     }                                                                                       \
     printf("took avg:%6luns over %d samples\n",total/samples , num);}
 
-uint8_t etsi_ipccoid[4] = {0x05, 0x03, 0x0a, 0x02};
-uint8_t etsi_ipirioid[4] = {0x05, 0x03, 0x0a, 0x01};
-uint8_t etsi_ipmmccoid[4] = {0x05, 0x05, 0x06, 0x02};
-uint8_t etsi_ipmmirioid[4] = {0x05, 0x05, 0x06, 0x01};
+
 uint8_t trueResult[] = {
             0xa1, 0x80, 
                 0x80, 0x08, 0x04, 0x00, 0x02, 0x02, 0x05, 0x01, 0x11, 0x00,
@@ -110,206 +107,6 @@ uint8_t ipcc_truth[] = {
                             0xa1, 0x29, 
                                 0x80, 0x27, 
                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-
-typedef struct wandder_pshdr {
-    uint32_t totallen;
-    wandder_buf_t block_0;
-    wandder_buf_t cin;
-    wandder_buf_t block_1;
-    wandder_buf_t seqno;
-    wandder_buf_t block_2;
-    wandder_buf_t sec;
-    wandder_buf_t usec;
-    wandder_buf_t block_3;
-} wandder_pshdr_t;
-
-void wandder_pshdr_update(int64_t cin,
-        int64_t seqno, struct timeval *tv, wandder_pshdr_t * hdr) {
-
-    ber_rebuild_integer(
-        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        1, 
-        &(cin), 
-        sizeof(int64_t),
-        hdr->cin.buf);
-
-    ber_rebuild_integer(
-        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        4, 
-        &(seqno), 
-        sizeof(int64_t),
-        hdr->seqno.buf);
-
-    ber_rebuild_integer(
-        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        0, 
-        &(tv->tv_sec), 
-        sizeof(tv->tv_sec),
-        hdr->sec.buf);
-
-    ber_rebuild_integer(
-        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        1, 
-        &(tv->tv_usec), 
-        sizeof(tv->tv_usec),
-        hdr->usec.buf);
-}
-
-
-typedef enum {
-    OPENLI_PREENCODE_USEQUENCE,
-    OPENLI_PREENCODE_CSEQUENCE_0,
-    OPENLI_PREENCODE_CSEQUENCE_1,
-    OPENLI_PREENCODE_CSEQUENCE_2,
-    OPENLI_PREENCODE_CSEQUENCE_3,
-    OPENLI_PREENCODE_CSEQUENCE_7,	/* Microsecond timestamp */
-    OPENLI_PREENCODE_CSEQUENCE_11,  /* IPMMIRI */
-    OPENLI_PREENCODE_CSEQUENCE_12,  /* IPMMCC */
-    OPENLI_PREENCODE_PSDOMAINID,
-    OPENLI_PREENCODE_LIID,
-    OPENLI_PREENCODE_AUTHCC,
-    OPENLI_PREENCODE_OPERATORID,
-    OPENLI_PREENCODE_NETWORKELEMID,
-    OPENLI_PREENCODE_DELIVCC,
-    OPENLI_PREENCODE_INTPOINTID,
-    OPENLI_PREENCODE_TVCLASS,
-    OPENLI_PREENCODE_IPMMIRIOID,
-    OPENLI_PREENCODE_IPCCOID,
-    OPENLI_PREENCODE_IPIRIOID,
-    OPENLI_PREENCODE_IPMMCCOID,
-    OPENLI_PREENCODE_DIRFROM,
-    OPENLI_PREENCODE_DIRTO,
-    OPENLI_PREENCODE_DIRUNKNOWN,
-    OPENLI_PREENCODE_INTEGERSPACE,
-    OPENLI_PREENCODE_LAST
-
-} preencode_index_t;
-
-typedef struct etsili_intercept_details {
-    char *liid;
-    char *authcc;
-    char *delivcc;
-    char *intpointid;
-    char *operatorid;
-    char *networkelemid;
-} etsili_intercept_details_t;
-
-
-static inline wandder_pshdr_t * init_pshdr_pc_ber(wandder_buf_t **precomputed, int64_t cin,
-        int64_t seqno, struct timeval *tv) {
-
-    /* hdrdata should be pretty static for each ETSI LI record, so
-     * you can populate it once and repeatedly use it.
-     * CIN, seqno and tv will change for each record, so I've made them
-     * into separate parameters.
-     */
-    wandder_pshdr_t *header = malloc(sizeof(wandder_pshdr_t));
-
-    uint32_t totallen = 
-        precomputed[OPENLI_PREENCODE_CSEQUENCE_1]->len+
-        precomputed[OPENLI_PREENCODE_PSDOMAINID]->len+
-        precomputed[OPENLI_PREENCODE_LIID]->len+
-        precomputed[OPENLI_PREENCODE_AUTHCC]->len+
-        precomputed[OPENLI_PREENCODE_CSEQUENCE_3]->len+
-        precomputed[OPENLI_PREENCODE_CSEQUENCE_0]->len+
-        precomputed[OPENLI_PREENCODE_OPERATORID]->len+
-        precomputed[OPENLI_PREENCODE_NETWORKELEMID]->len+
-        2 + //endseq
-        9 + //precomputed[]->len+//cin integer size
-        precomputed[OPENLI_PREENCODE_DELIVCC]->len+
-        2 + //endseq
-        9 +//precomputed[]->len+//seqno integer size
-        (
-            (precomputed[OPENLI_PREENCODE_INTPOINTID]) ? 
-                (
-                    precomputed[OPENLI_PREENCODE_INTPOINTID]->len +
-                    precomputed[OPENLI_PREENCODE_CSEQUENCE_7]->len
-                ): 
-                (
-                    precomputed[OPENLI_PREENCODE_CSEQUENCE_7]->len
-                ) 
-        )+ 
-        9 + //precomputed[]->len+//sec integer size
-        9 + //precomputed[]->len+//usec integer size
-        2 +
-        precomputed[OPENLI_PREENCODE_TVCLASS]->len+
-        2;
-
-
-    uint8_t *ptr = malloc(totallen);
-    header->totallen = totallen;
-
-
-    //////////////////////////////////////////////////////////////// block 0
-    header->block_0.buf = ptr;
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_CSEQUENCE_1]);
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_PSDOMAINID]);
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_LIID]);
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_AUTHCC]);
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_CSEQUENCE_3]);
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_CSEQUENCE_0]);
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_OPERATORID]);
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_NETWORKELEMID]);
-    ENDCONSTRUCTEDBLOCK(ptr,1) //endseq
-    header->block_0.len = ((void *)ptr) - header->block_0.buf;
-    //////////////////////////////////////////////////////////////// cin
-    header->cin.buf = ptr;
-    ptr += ber_rebuild_integer(
-        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        1, 
-        &(cin), 
-        sizeof(int64_t),
-        header->cin.buf);
-    header->cin.len = ((void *)ptr) - header->cin.buf;
-    //////////////////////////////////////////////////////////////// block 1
-    header->block_1.buf = ptr;
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_DELIVCC]);
-    ENDCONSTRUCTEDBLOCK(ptr,1);//endseq
-    header->block_1.len = ((void *)ptr) - header->block_1.buf;
-    //////////////////////////////////////////////////////////////// seqno
-    header->seqno.buf = ptr;
-    ptr+= ber_rebuild_integer(
-        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        4, 
-        &(seqno), 
-        sizeof(int64_t),
-        header->seqno.buf);
-    header->seqno.len = ((void *)ptr) - header->seqno.buf;
-    //////////////////////////////////////////////////////////////// block 2
-    header->block_2.buf = ptr;
-    if (precomputed[OPENLI_PREENCODE_INTPOINTID]){
-        MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_INTPOINTID]);
-    }
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_CSEQUENCE_7]);
-    header->block_2.len = ((void *)ptr) - header->block_2.buf;
-    //////////////////////////////////////////////////////////////// sec
-    header->sec.buf = ptr;
-    ptr+= ber_rebuild_integer(
-        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        0, 
-        &(tv->tv_sec), 
-        sizeof(tv->tv_sec),
-        header->sec.buf);
-    header->sec.len = ((void *)ptr) - header->sec.buf;
-    //////////////////////////////////////////////////////////////// usec
-    header->usec.buf = ptr;
-    ptr+= ber_rebuild_integer(
-        WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        1, 
-        &(tv->tv_usec), 
-        sizeof(tv->tv_usec),
-        header->usec.buf);
-    header->usec.len = ((void *)ptr) - header->usec.buf;
-    //////////////////////////////////////////////////////////////// block 3
-    header->block_3.buf = ptr;
-    ENDCONSTRUCTEDBLOCK(ptr,1);//endseq
-    MEMCPYPREENCODE(ptr, precomputed[OPENLI_PREENCODE_TVCLASS]);
-    ENDCONSTRUCTEDBLOCK(ptr,1);//endseq
-    header->block_3.len = ((void *)ptr) - header->block_3.buf;
-
-    return header;
-}
 
 static inline void encode_ipcc_body(wandder_encoder_t *encoder,
         wandder_encode_job_t *precomputed, void *ipcontent, uint32_t iplen,
@@ -369,259 +166,9 @@ static inline void encode_ipcc_body(wandder_encoder_t *encoder,
     END_ENCODED_SEQUENCE(encoder, 7);
 
     free_wandber_encoder(enc_ber);
-
 }
 
-void etsili_preencode_static_fields_ber(
-        wandder_buf_t **pendarray, etsili_intercept_details_t *details) {
 
-    wandder_buf_t *p;
-    int tvclass = 1;
-    uint32_t dirin = 0, dirout = 1, dirunk = 2;
-
-    memset(pendarray, 0, sizeof(p) * OPENLI_PREENCODE_LAST);
-
-    pendarray[OPENLI_PREENCODE_USEQUENCE] = build_ber_field(
-            WANDDER_CLASS_UNIVERSAL_CONSTRUCT, 
-            WANDDER_TAG_SEQUENCE,
-            WANDDER_TAG_SEQUENCE,
-            NULL, 
-            0,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_CSEQUENCE_0] =  build_ber_field(
-            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
-            0,
-            WANDDER_TAG_SEQUENCE,
-            NULL, 
-            0,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_CSEQUENCE_1] =  build_ber_field(
-            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
-            1,
-            WANDDER_TAG_SEQUENCE,
-            NULL, 
-            0,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_CSEQUENCE_2] =  build_ber_field(
-            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
-            2,
-            WANDDER_TAG_SEQUENCE,
-            NULL, 
-            0,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_CSEQUENCE_3] =  build_ber_field(
-            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
-            3,
-            WANDDER_TAG_SEQUENCE,
-            NULL, 
-            0,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_CSEQUENCE_7] =  build_ber_field(
-            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
-            7,
-            WANDDER_TAG_SEQUENCE,
-            NULL, 
-            0,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_CSEQUENCE_11] =  build_ber_field(
-            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
-            11,
-            WANDDER_TAG_SEQUENCE,
-            NULL, 
-            0,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_CSEQUENCE_12] =  build_ber_field(
-            WANDDER_CLASS_CONTEXT_CONSTRUCT, 
-            12,
-            WANDDER_TAG_SEQUENCE,
-            NULL, 
-            0,
-            NULL,
-            0);
-
-    //TODO i dont think this is 100% correct but i cant see anything wrong
-    pendarray[OPENLI_PREENCODE_PSDOMAINID] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0,
-            WANDDER_TAG_OID,
-            (uint8_t *)WANDDER_ETSILI_PSDOMAINID, 
-            sizeof WANDDER_ETSILI_PSDOMAINID,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_LIID] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            1,
-            WANDDER_TAG_OCTETSTRING,
-            (uint8_t *)details->liid, 
-            strlen(details->liid),
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_AUTHCC] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            2,
-            WANDDER_TAG_OCTETSTRING,
-            (uint8_t *)details->authcc, 
-            strlen(details->authcc),
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_OPERATORID] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0,
-            WANDDER_TAG_OCTETSTRING,
-            (uint8_t *)details->operatorid, 
-            strlen(details->operatorid),
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_NETWORKELEMID] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            1,
-            WANDDER_TAG_OCTETSTRING,
-            (uint8_t *)details->networkelemid, 
-            strlen(details->networkelemid),
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_DELIVCC] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            2,
-            WANDDER_TAG_OCTETSTRING,
-            (uint8_t *)details->delivcc, 
-            strlen(details->delivcc),
-            NULL,
-            0);
-
-    //either build the field or set it NULL
-    pendarray[OPENLI_PREENCODE_INTPOINTID] =  (details->intpointid) ? build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            6,
-            WANDDER_TAG_OCTETSTRING,
-            (uint8_t *)details->intpointid, 
-            strlen(details->intpointid),
-            NULL,
-            0) : NULL;
-
-    pendarray[OPENLI_PREENCODE_TVCLASS] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            8,
-            WANDDER_TAG_ENUM,
-            (uint8_t *)(&tvclass), 
-            sizeof tvclass,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_IPMMIRIOID] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0,
-            WANDDER_TAG_RELATIVEOID,
-            etsi_ipmmirioid, 
-            sizeof etsi_ipmmirioid,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_IPCCOID] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0,
-            WANDDER_TAG_RELATIVEOID,
-            etsi_ipccoid, 
-            sizeof etsi_ipccoid,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_IPIRIOID] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0,
-            WANDDER_TAG_RELATIVEOID,
-            etsi_ipirioid, 
-            sizeof etsi_ipirioid,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_IPMMCCOID] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0,
-            WANDDER_TAG_RELATIVEOID,
-            etsi_ipmmccoid, 
-            sizeof etsi_ipmmccoid,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_DIRFROM] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0,
-            WANDDER_TAG_ENUM,
-            (uint8_t *)(&dirin), 
-            sizeof dirin,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_DIRTO] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0,
-            WANDDER_TAG_ENUM,
-            (uint8_t *)(&dirout), 
-            sizeof dirout,
-            NULL,
-            0);
-
-    pendarray[OPENLI_PREENCODE_DIRUNKNOWN] =  build_ber_field( 
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0,
-            WANDDER_TAG_ENUM,
-            (uint8_t *)(&dirunk), 
-            sizeof dirunk,
-            NULL,
-            0);
-
-}
-
-void etsili_clear_preencoded_fields_ber( wandder_buf_t **pendarray ) {
-
-    preencode_index_t i;
-
-    for (i = 0; i < OPENLI_PREENCODE_LAST; i++) {
-        if (pendarray[i]) {
-            free(pendarray[i]->buf);
-            free(pendarray[i]);
-        }
-    }
-}
-
-wandber_encoded_result_t *encode_etsi_ipcc(
-        wandder_buf_t **precomputed, int64_t cin, int64_t seqno,
-        struct timeval *tv, void *ipcontents, uint32_t iplen, uint8_t dir,
-        wandder_pshdr_t **hdr) {
-
-    if (*hdr){
-        wandder_pshdr_update(cin, seqno, tv, *hdr);
-    } else {
-        *hdr = init_pshdr_pc_ber(precomputed, cin, seqno, tv);
-    }
-    
-    //encode_ipcc_body(encoder, precomputed, ipcontents, iplen, dir);
-    //wandder_encoded_result_t * res = wandder_encode_finish(encoder);
-    wandber_encoded_result_t * res = malloc(sizeof *res);
-    res->buf = (*hdr)->block_0.buf;
-    res->length = (*hdr)->totallen;
-    return res;
-}
 
 int main(int argc, char *argv[])
 {
@@ -636,17 +183,6 @@ int main(int argc, char *argv[])
     details.networkelemid  = "networkelemid";
 
     wandder_buf_t **preencoded_ber = calloc(OPENLI_PREENCODE_LAST, sizeof preencoded_ber);
-
-    printf("prencoding..........");
-    TIMEFUNC(
-            {   //function to time
-                etsili_preencode_static_fields_ber(preencoded_ber, &details);
-            },
-            {   //reset code
-                etsili_clear_preencoded_fields_ber(preencoded_ber);
-            }, 
-            runtimes)
-    
     etsili_preencode_static_fields_ber(preencoded_ber, &details);
 
     wandber_encoded_result_t *res_ber;
@@ -701,6 +237,18 @@ int main(int argc, char *argv[])
     *hdr = NULL;
     
     if (runtimes != 0){
+        printf("prencoding..........");
+        etsili_clear_preencoded_fields_ber(preencoded_ber);
+        TIMEFUNC(
+                {   //function to time
+                    etsili_preencode_static_fields_ber(preencoded_ber, &details);
+                },
+                {   //reset code
+                    etsili_clear_preencoded_fields_ber(preencoded_ber);
+                }, 
+                runtimes)
+        etsili_preencode_static_fields_ber(preencoded_ber, &details);
+
         printf("encoding firsttime..");
         TIMEFUNC(
             {   //function to time
@@ -739,11 +287,11 @@ int main(int argc, char *argv[])
                 gettimeofday(&tv, NULL);
             }, 
             runtimes)
-
+        free((*hdr)->block_0.buf);
+        free(*hdr);
     }
 
-    free((*hdr)->block_0.buf);
-    free(*hdr);
+
 
     etsili_clear_preencoded_fields_ber(preencoded_ber);
     free(preencoded_ber);
