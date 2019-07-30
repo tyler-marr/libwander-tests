@@ -53,10 +53,11 @@
             samples = 1;                                                                    \
         }                                                                                   \
     }                                                                                       \
-    printf("took avg:%6luns over %d samples\n",total/samples , num);}
+    printf("took avg:%6luns over %d samples, ",total/samples , num);}
 
 
-uint8_t trueResult[] = {
+uint8_t true_header[] = {
+        0x30, 0x80,
             0xa1, 0x80, 
                 0x80, 0x08, 0x04, 0x00, 0x02, 0x02, 0x05, 0x01, 0x11, 0x00,
                 0x81, 0x04, 0x6c, 0x69, 0x69, 0x64, 
@@ -96,83 +97,213 @@ uint8_t trueResult[] = {
     [8] (1 byte) 01
   */
 
-uint8_t ipcc_truth[] = {
-        0xa2, 0x3c, 
-            0xa1, 0x3a, 
-                0x30, 0x38, 
-                    0x80, 0x01, 0x42, 
-                    0xa2, 0x33, 
-                        0xa2, 0x31, 
-                            0x80, 0x04, 0x05, 0x03, 0x0a, 0x02, 
-                            0xa1, 0x29, 
-                                0x80, 0x27, 
-                                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+uint8_t true_ipcc[] = {
+            0xa2, 0x80, 
+                0xa1, 0x80,
+                    0x30, 0x80,
+                        0x80, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x42, 
+                        0xa2, 0x80, 
+                            0xa2, 0x80, 
+                                0x80, 0x04, 0x05, 0x03, 0x0a, 0x02,
+                                0xa1, 0x80, 
+                                    0x80, 0x27, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
+                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00,
+                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
+                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
+                                                0x00, 0x00, 0x00, 0x00,  0x00, 
+                                    0x00, 0x00, 
+                                0x00, 0x00, 
+                            0x00, 0x00, 
+                        0x00, 0x00, 
+                    0x00, 0x00, 
+                0x00, 0x00, 
+            0x00, 0x00, 
+        0x00, 0x00}; 
+/*
+[2] (1 elem)
+    [1] (1 elem)
+        SEQUENCE (2 elem)
+            [0] B
+            [2] (1 elem)
+                [2] (2 elem)
+                    [0] (4 byte) 05030A02
+                    [1] (1 elem)
+                        [0] (39 byte) 0000000000000000000000000000000000000000000000000000000000000000000000…
+*/
 
-static inline void encode_ipcc_body(wandder_encoder_t *encoder,
-        wandder_encode_job_t *precomputed, void *ipcontent, uint32_t iplen,
-        uint8_t dir) {
+uint8_t true_ipmmcc[] = {
+            0xa2, 0x80, 
+                0xa1, 0x80,
+                    0x30, 0x80,
+                        0x80, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x42, 
+                        0xa2, 0x80, 
+                            0xac, 0x80,
+                                0x80, 0x04, 0x05, 0x05, 0x06, 0x02,
+                                0x80, 0x27, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
+                                            0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00,
+                                            0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
+                                            0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
+                                            0x00, 0x00, 0x00, 0x00,  0x00, 
+                                0x82, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+                                0x82, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+                                0x00, 0x00, 
+                            0x00, 0x00, 
+                        0x00, 0x00, 
+                    0x00, 0x00, 
+                0x00, 0x00, 
+            0x00, 0x00,
+        0x00, 0x00}; 
+/*
+[2] (1 elem)
+  [1] (1 elem)
+    SEQUENCE (2 elem)
+      [0] B
+      [2] (1 elem)
+        [12] (4 elem)
+          [0] (4 byte) 05050602
+          [0] (39 byte) 0000000000000000000000000000000000000000000000000000000000000000000000…
+          [2] (1 byte) 00
+          [2] (1 byte) 00
+*/
 
-    uint32_t dir32 = dir;
-    wandber_encoded_result_t *res_ber;  
-    wandber_encoder_t *enc_ber = init_wandber_encoder();
-    wandder_encode_job_t *jobarray[8];
 
-    jobarray[0] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_2]);
-    jobarray[1] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_1]);
-    jobarray[2] = &(precomputed[OPENLI_PREENCODE_USEQUENCE]);
+uint8_t true_ipmmiri[] = {
+            0xa2, 0x80, 
+                0xa1, 0x80,
+                    0x30, 0x80,
+                        0x80, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x42, 
+                        0xa2, 0x80, 
+                            0xa1, 0x80,
+                                0x80, 0x04, 0x05, 0x05, 0x06, 0x01,
+                                0xa1, 0x80,
+                                    0x80, 0x27, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
+                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00,
+                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
+                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
+                                                0x00, 0x00, 0x00, 0x00,  0x00, 
+                                    0x00, 0x00, 
+                                0x00, 0x00, 
+                            0x00, 0x00, 
+                        0x00, 0x00, 
+                    0x00, 0x00, 
+                0x00, 0x00,
+            0x00, 0x00,
+        0x00, 0x00};
+/*
+[2] (1 elem)
+    [0] (1 elem)
+        SEQUENCE (2 elem)
+            [0] B
+            [2] (1 elem)
+                [1] (2 elem)
+                    [0] (4 byte) 05050601
+                    [1] (1 elem)
+                        [0] (39 byte) 0000000000000000000000000000000000000000000000000000000000000000000000…
+*/
 
+int runtimes = 0;
 
-    wandder_encode_next_preencoded(encoder, jobarray, 3);
+void test_encoding(void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
+        struct timeval *, void *, uint32_t, uint8_t,
+        wandber_etsili_top_t *), wandder_buf_t **preencoded_ber, wandder_buf_t true_body){
 
-    wandber_encode_next_preencoded(enc_ber, jobarray, 3);
-    res_ber = wandber_encode_finish(enc_ber); 
-    //save output from res_ber
-    free(res_ber->buf);
-    free(res_ber);
-    res_ber = NULL;
+    int64_t cin = 0xfeedbeef;
+    int64_t seqno = 0xdead;
+    struct timeval tv;
+    tv.tv_sec = 0xBADCAFE;
+    tv.tv_usec = 0x1337;
+    char* ipcontentsstring = "this is the ippc body or the ipcontents";
+    uint32_t iplen = strlen(ipcontentsstring);
+    uint8_t ipcontents[1000] = {3};
+    memcpy(ipcontents, ipcontentsstring, iplen);
+    uint8_t dir = 0x42; //doubles as iritype
 
+    wandber_etsili_top_t top;
+    memset(&top, 0, sizeof top);
 
+    (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
 
-    if (dir == 0) {
-        jobarray[3] = &(precomputed[OPENLI_PREENCODE_DIRFROM]);
-        wandder_encode_next_preencoded(encoder, jobarray, 1);
-    } else if (dir == 1) {
-        jobarray[3] = &(precomputed[OPENLI_PREENCODE_DIRTO]);
-        wandder_encode_next_preencoded(encoder, jobarray, 1);
-    } else if (dir == 2) {
-        jobarray[3] = &(precomputed[OPENLI_PREENCODE_DIRUNKNOWN]);
-        wandder_encode_next_preencoded(encoder, jobarray, 1);
-    } else {
-        wandder_encode_next(encoder, WANDDER_TAG_ENUM,
-                WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &dir32,
-                sizeof(uint32_t));
+    for (int i = 0; i < sizeof true_header; i++){
+        if (true_header[i] != *(uint8_t *)(top.buf+i)){                
+            PRINTBUF(top.buf, sizeof true_header)
+            printf("elemetn %d differs\n", i);
+            PRINTBUF(true_header, sizeof true_header)
+            assert(0);
+        }
     }
-    res_ber = wandber_encode_finish(enc_ber); 
-    //save output from res_ber
-    free(res_ber->buf);
-    free(res_ber);
-    res_ber = NULL;
 
-    jobarray[0] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_2]);
-    jobarray[1] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_2]);
-    jobarray[2] = &(precomputed[OPENLI_PREENCODE_IPCCOID]);
-    jobarray[3] = &(precomputed[OPENLI_PREENCODE_CSEQUENCE_1]);
+    for (size_t i = 0; i< true_body.len; i++){
+        uint8_t trueval = (((uint8_t *)true_body.buf)[0]);
+        uint8_t actualval = *(top.buf + sizeof true_header);
+        if (trueval != actualval){
+            printf("elemetn %ld differs, true[0x%02x], actual[0x%02x]\n", i, trueval, actualval);
+            PRINTBUF(top.buf + sizeof true_header, top.len - sizeof true_header)
+            printf("\n");
+            PRINTBUF(true_body.buf, true_body.len);
+            assert(0);
+        }
+    }
+    if (true_body.len + sizeof true_header != top.len){
+        printf("true size = %4d, actual size = %4d\n", true_body.len + sizeof true_header, top.len);
+        PRINTBUF(top.buf, top.len)
+        assert(0);
+    }
+    printf("Passed test.\n");
+    free(top.buf);
+    memset(&top, 0, sizeof top);
 
-    wandder_encode_next_preencoded(encoder, jobarray, 4);
+    
+    if (runtimes != 0){
 
-    wandder_encode_next(encoder, WANDDER_TAG_IPPACKET,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, ipcontent, iplen);
+        printf("encoding firsttime..");
+        TIMEFUNC(
+            {   //function to time
+                encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+            },
+            {   //reset code
+                free(top.buf);
+                memset(&top, 0, sizeof top);
+                cin = rand() >> (rand() % 64);
+                seqno = rand() >> (rand() % 64);
+                iplen = rand() % 1000;
+                dir = rand() %3;
+                gettimeofday(&tv, NULL);
+            }, 
+            runtimes)
+        printf("Needs to be done once per stream\n");
 
-    END_ENCODED_SEQUENCE(encoder, 7);
+        gettimeofday(&tv, NULL);
+        encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+        free(top.buf);
+        memset(&top, 0, sizeof top);
+        cin = rand() >> (rand() % 64);
+        seqno = rand() >> (rand() % 64);
+        iplen = rand() % 1000;
+        dir = rand() %3;
+        gettimeofday(&tv, NULL);
 
-    free_wandber_encoder(enc_ber);
+        printf("update encoding.....");
+        TIMEFUNC(
+            {   //function to time
+                encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+            },
+            {   //reset code
+                cin = rand() >> (rand() % 64);
+                seqno = rand() >> (rand() % 64);
+                iplen = rand() % 1000;
+                dir = rand() %3;
+                gettimeofday(&tv, NULL);
+            }, 
+            runtimes)
+        printf("Needs to be done everytime\n");
+        free(top.buf);
+        memset(&top, 0, sizeof top);
+    }
 }
-
-
 
 int main(int argc, char *argv[])
 {
-    int runtimes = strtod(argv[1],NULL);
+    runtimes = strtod(argv[1],NULL);
 
     etsili_intercept_details_t details;
     details.liid           = "liid"; 
@@ -183,59 +314,7 @@ int main(int argc, char *argv[])
     details.networkelemid  = "networkelemid";
 
     wandder_buf_t **preencoded_ber = calloc(OPENLI_PREENCODE_LAST, sizeof preencoded_ber);
-    etsili_preencode_static_fields_ber(preencoded_ber, &details);
 
-    wandber_encoded_result_t *res_ber;
-    
-    int64_t cin = 0xfeedbeef;
-    int64_t seqno = 0xdead;
-    struct timeval tv;
-    tv.tv_sec = 0xBADCAFE;
-    tv.tv_usec = 0x1337;
-    char* ipcontents = "this is the ippc body or the ipcontents";
-    uint32_t iplen = strlen(ipcontents);
-    uint8_t dir = 0x42;
-
-    wandder_pshdr_t *hdrspace = NULL;
-    wandder_pshdr_t **hdr = &hdrspace;
-
-    res_ber = encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
-    if ((*hdr)->totallen == sizeof trueResult){
-        for (int i = 0; i < sizeof trueResult; i++){
-            if (trueResult[i] != *(uint8_t *)(res_ber->buf+i)){
-                printf("elemetn : %d\n", i);
-                PRINTBUF(res_ber->buf, res_ber->length)
-                assert(0);
-            }
-        }
-    } else {
-        printf("\n");
-        PRINTBUF((*hdr)->block_0.buf, (*hdr)->totallen)
-        printf("\n");
-        PRINTBUF(trueResult, sizeof trueResult);
-        printf("\n");
-        assert(0);
-    }
-    // if (res_ber->length == sizeof ipcc_truth){
-    //     for (int i = 0; i< res_ber->length; i++){
-    //         if (ipcc_truth[i] != *(uint8_t *)(res_ber->buf+i)){
-    //             printf("elemetn : %d\n", i);
-    //             PRINTBUF(res_ber->buf, res_ber->length)
-    //             assert(0);
-    //         }
-    //     }
-    // } else {
-    //     PRINTBUF(res_ber->buf, res_ber->length)
-    //     PRINTBUF(ipcc_truth, sizeof ipcc_truth);
-    //     assert(0);
-    // }    
-    printf("Passed test.\n");
-    free(res_ber);
-    res_ber = NULL;
-    free((*hdr)->block_0.buf);
-    free(*hdr);
-    *hdr = NULL;
-    
     if (runtimes != 0){
         printf("prencoding..........");
         etsili_clear_preencoded_fields_ber(preencoded_ber);
@@ -247,50 +326,25 @@ int main(int argc, char *argv[])
                     etsili_clear_preencoded_fields_ber(preencoded_ber);
                 }, 
                 runtimes)
-        etsili_preencode_static_fields_ber(preencoded_ber, &details);
-
-        printf("encoding firsttime..");
-        TIMEFUNC(
-            {   //function to time
-                res_ber = encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
-            },
-            {   //reset code
-                free(res_ber);
-                res_ber = NULL;
-                free((*hdr)->block_0.buf);
-                free(*hdr);
-                *hdr = NULL;
-                cin = rand() >> (rand() % 64);
-                seqno = rand() >> (rand() % 64);
-                gettimeofday(&tv, NULL);
-            }, 
-            runtimes)
-
-        gettimeofday(&tv, NULL);
-        res_ber = encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
-        free(res_ber);
-        res_ber = NULL;
-        cin = rand() >> (rand() % 64);
-        seqno = rand() >> (rand() % 64);
-        gettimeofday(&tv, NULL);
-
-        printf("update encoding.....");
-        TIMEFUNC(
-            {   //function to time
-                res_ber = encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, hdr);
-            },
-            {   //reset code
-                free(res_ber);
-                res_ber = NULL;
-                cin = rand() >> (rand() % 64);
-                seqno = rand() >> (rand() % 64);
-                gettimeofday(&tv, NULL);
-            }, 
-            runtimes)
-        free((*hdr)->block_0.buf);
-        free(*hdr);
+        printf("Needs to be done once per stream\n");    
     }
+    etsili_preencode_static_fields_ber(preencoded_ber, &details);
 
+    printf("\nRunning ipcc tests.....\n");
+    wandder_buf_t true_ipcc_buf = {true_ipcc, sizeof true_ipcc};
+    test_encoding(&encode_etsi_ipcc, preencoded_ber, true_ipcc_buf);
+
+    printf("\nRunning ipmmcc tests...\n");
+    wandder_buf_t true_ipmmcc_buf = {true_ipmmcc, sizeof true_ipmmcc};
+    test_encoding(&encode_etsi_ipmmcc, preencoded_ber, true_ipmmcc_buf);
+
+    printf("\nRunning ipmmiri tests...\n");
+    wandder_buf_t true_ipmmiri_buf = {true_ipmmiri, sizeof true_ipmmiri};
+    test_encoding(&encode_etsi_ipmmiri, preencoded_ber, true_ipmmiri_buf);
+
+    // printf("Running ipiri tests...\n");
+    // wandder_buf_t true_ipiri_buf = {true_ipiri, sizeof true_ipiri};
+    // test_encoding(&encode_etsi_ipiri, preencoded_ber, true_ipiri_buf);
 
 
     etsili_clear_preencoded_fields_ber(preencoded_ber);
@@ -298,4 +352,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
