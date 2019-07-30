@@ -3,33 +3,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
 #include <assert.h>
 
-
-#include <unistd.h>
-
-
 #include <libwandder.h>
 #include <libwandder_etsili.h>
-
-
-#define ENC_USEQUENCE(enc) wandder_encode_next(enc, WANDDER_TAG_SEQUENCE, \
-        WANDDER_CLASS_UNIVERSAL_CONSTRUCT, WANDDER_TAG_SEQUENCE, NULL, 0)
-
-#define ENC_CSEQUENCE(enc, x) wandder_encode_next(enc, WANDDER_TAG_SEQUENCE, \
-        WANDDER_CLASS_CONTEXT_CONSTRUCT, x, NULL, 0)
-
-#define END_ENCODED_SEQUENCE(enc, x) \
-        wandder_encode_endseq_repeat(enc, x);
-
-#define MEMCPYPREENCODE(ptr, itembuf) {memcpy(ptr, itembuf->buf, itembuf->len); ptr+=itembuf->len;}
-
-#define ENDCONSTRUCTEDBLOCK(ptr,num) {for (int uniuqevari = 0; uniuqevari < num*2; uniuqevari++){*ptr = 0;ptr+=1;}}
 
 #define PRINTBUF(ptr,len) for (int uniuqevari = 0; uniuqevari< len; uniuqevari++)\
             printf("%02x ",*(uint8_t *)(ptr+uniuqevari));\
@@ -223,7 +205,7 @@ void test_encoding(void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
 
     (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
 
-    for (int i = 0; i < sizeof true_header; i++){
+    for (size_t i = 0; i < sizeof true_header; i++){
         if (true_header[i] != *(uint8_t *)(top.buf+i)){                
             PRINTBUF(top.buf, sizeof true_header)
             printf("elemetn %d differs\n", i);
