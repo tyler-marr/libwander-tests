@@ -18,19 +18,19 @@
         printf("\n");
 
 #define TIMEFUNC(func, reset, num) {                                                        \
-    struct timespec start, end;                                                             \
+    struct timespec start, end;                                                       \
     uint64_t delta_us = 0;                                                                  \
     uint64_t samples = 0;                                                                   \
     uint64_t total = 0;                                                                     \
     for (int uniuqevari = 0; uniuqevari < num; uniuqevari++){                               \
-        clock_gettime(CLOCK_MONOTONIC_RAW, &start);                                         \
+        clock_gettime(CLOCK_MONOTONIC, &start);                                             \
         func                                                                                \
-        clock_gettime(CLOCK_MONOTONIC_RAW, &end);                                           \
+        clock_gettime(CLOCK_MONOTONIC, &end);                                               \
         reset                                                                               \
         delta_us = (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec);\
         total += delta_us;                                                                  \
         samples++;                                                                          \
-        if (total > (UINT32_MAX)){                                                          \
+        if (total > (UINT64_MAX>>1)){                                                       \
             total = total/samples;                                                          \
             samples = 1;                                                                    \
         }                                                                                   \
@@ -240,7 +240,7 @@ void test_encoding(void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
         printf("encoding firsttime..");
         TIMEFUNC(
             {   //function to time
-                encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+                (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
             },
             {   //reset code
                 free(top.buf);
@@ -255,7 +255,7 @@ void test_encoding(void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
         printf("Needs to be done once per stream\n");
 
         gettimeofday(&tv, NULL);
-        encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+        (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
         free(top.buf);
         memset(&top, 0, sizeof top);
         cin = rand() >> (rand() % 64);
@@ -267,7 +267,7 @@ void test_encoding(void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
         printf("update encoding.....");
         TIMEFUNC(
             {   //function to time
-                encode_etsi_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+                (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
             },
             {   //reset code
                 cin = rand() >> (rand() % 64);
