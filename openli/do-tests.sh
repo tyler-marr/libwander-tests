@@ -38,7 +38,7 @@ echo "#####################Running ALU-shim tests"
 # TODO cap rxqueues to 1 to prevent RSS from messing up our tests
 
 if ! run_simple alushim 43332 3283 4591254 ALUSHIMTEST; then
-	echo "Failed ALU-shim test"
+        echo "Failed ALU-shim test"
         exit 1
 fi
 
@@ -48,13 +48,20 @@ echo "################Running TCP SIP VOIP tests"
 # we tend to miss the first few RTP packets because they're in sync
 # with the SIP invite acceptance
 if ! run_simple tcpsip 43332 3945 789000 TCPSIPTEST; then
-	echo "Failed TCP SIP VOIP test (CC)"
+        sleep 10
+        echo "Failed TCP SIP VOIP test (CC)"
         exit 2
 fi
 echo "################Running TCP SIP VOIP tests2"
 if ! run_simple tcpsip 44333 17 12182 TCPSIPTEST; then
-	echo "Failed TCP SIP VOIP test (IRI)"
+        sleep 10
+        echo "Failed TCP SIP VOIP test (IRI)"
         exit 3
 fi
+
+sleep 10
+echo " "
+echo "All tests passed."
+echo " "
 
 exit 0
