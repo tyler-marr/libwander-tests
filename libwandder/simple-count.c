@@ -185,9 +185,11 @@ uint8_t true_ipmmiri[] = {
 
 int runtimes = 0;
 
-void test_encoding(void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
-        struct timeval *, void *, uint32_t, uint8_t,
-        wandber_etsili_top_t *), wandder_buf_t **preencoded_ber, wandder_buf_t true_body){
+void test_encoding(
+        void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
+            struct timeval *, void *, size_t, uint8_t,
+            wandber_etsili_top_t *), 
+        wandder_buf_t **preencoded_ber, wandder_buf_t true_body){
 
     int64_t cin = 0xfeedbeef;
     int64_t seqno = 0xdead;
@@ -208,7 +210,7 @@ void test_encoding(void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
     for (size_t i = 0; i < sizeof true_header; i++){
         if (true_header[i] != *(uint8_t *)(top.buf+i)){                
             PRINTBUF(top.buf, sizeof true_header)
-            printf("elemetn %d differs\n", i);
+            printf("elemetn %ld differs\n", i);
             PRINTBUF(true_header, sizeof true_header)
             assert(0);
         }
@@ -226,7 +228,7 @@ void test_encoding(void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
         }
     }
     if (true_body.len + sizeof true_header != top.len){
-        printf("true size = %4d, actual size = %4d\n", true_body.len + sizeof true_header, top.len);
+        printf("true size = %4ld, actual size = %4ld\n", true_body.len + sizeof true_header, top.len);
         PRINTBUF(top.buf, top.len)
         assert(0);
     }
@@ -287,7 +289,7 @@ int main(int argc, char *argv[])
 {
     runtimes = strtod(argv[1],NULL);
 
-    etsili_intercept_details_t details;
+    wandber_etsili_intercept_details_t details;
     details.liid           = "liid"; 
     details.authcc         = "authcc";
     details.delivcc        = "delivcc";
@@ -295,41 +297,41 @@ int main(int argc, char *argv[])
     details.operatorid     = "operatorid";
     details.networkelemid  = "networkelemid";
 
-    wandder_buf_t **preencoded_ber = calloc(OPENLI_PREENCODE_LAST, sizeof preencoded_ber);
+    wandder_buf_t **preencoded_ber = calloc(WANDBER_PREENCODE_LAST, sizeof preencoded_ber);
 
     if (runtimes != 0){
         printf("prencoding..........");
-        etsili_clear_preencoded_fields_ber(preencoded_ber);
+        wandber_etsili_clear_preencoded_fields_ber(preencoded_ber);
         TIMEFUNC(
                 {   //function to time
-                    etsili_preencode_static_fields_ber(preencoded_ber, &details);
+                    wandber_etsili_preencode_static_fields_ber(preencoded_ber, &details);
                 },
                 {   //reset code
-                    etsili_clear_preencoded_fields_ber(preencoded_ber);
+                    wandber_etsili_clear_preencoded_fields_ber(preencoded_ber);
                 }, 
                 runtimes)
         printf("Needs to be done once per stream\n");    
     }
-    etsili_preencode_static_fields_ber(preencoded_ber, &details);
+    wandber_etsili_preencode_static_fields_ber(preencoded_ber, &details);
 
     printf("\nRunning ipcc tests.....\n");
     wandder_buf_t true_ipcc_buf = {true_ipcc, sizeof true_ipcc};
-    test_encoding(&encode_etsi_ipcc, preencoded_ber, true_ipcc_buf);
+    test_encoding(&wandber_encode_etsi_ipcc, preencoded_ber, true_ipcc_buf);
 
     printf("\nRunning ipmmcc tests...\n");
     wandder_buf_t true_ipmmcc_buf = {true_ipmmcc, sizeof true_ipmmcc};
-    test_encoding(&encode_etsi_ipmmcc, preencoded_ber, true_ipmmcc_buf);
+    test_encoding(&wandber_encode_etsi_ipmmcc, preencoded_ber, true_ipmmcc_buf);
 
-    printf("\nRunning ipmmiri tests...\n");
-    wandder_buf_t true_ipmmiri_buf = {true_ipmmiri, sizeof true_ipmmiri};
-    test_encoding(&encode_etsi_ipmmiri, preencoded_ber, true_ipmmiri_buf);
+    // printf("\nRunning ipmmiri tests...\n");
+    // wandder_buf_t true_ipmmiri_buf = {true_ipmmiri, sizeof true_ipmmiri};
+    // test_encoding(&wandber_encode_etsi_ipmmiri, preencoded_ber, true_ipmmiri_buf);
 
     // printf("Running ipiri tests...\n");
     // wandder_buf_t true_ipiri_buf = {true_ipiri, sizeof true_ipiri};
-    // test_encoding(&encode_etsi_ipiri, preencoded_ber, true_ipiri_buf);
+    // test_encoding(&wandber_encode_etsi_ipiri, preencoded_ber, true_ipiri_buf);
 
 
-    etsili_clear_preencoded_fields_ber(preencoded_ber);
+    wandber_etsili_clear_preencoded_fields_ber(preencoded_ber);
     free(preencoded_ber);
 
     return 0;
