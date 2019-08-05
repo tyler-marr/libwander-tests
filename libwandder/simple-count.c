@@ -13,19 +13,19 @@
 #include <libwandder.h>
 #include <libwandder_etsili.h>
 
-#define PRINTBUF(ptr,len) for (int uniuqevari = 0; uniuqevari< len; uniuqevari++)\
+#define PRINTBUF(ptr,len) for (size_t uniuqevari = 0; uniuqevari< len; uniuqevari++)\
             printf("%02x ",*(uint8_t *)(ptr+uniuqevari));\
         printf("\n");
 
 #define TIMEFUNC(func, reset, num) {                                                        \
-    struct timespec start, end;                                                       \
+    struct timespec start, end;                                                             \
     uint64_t delta_us = 0;                                                                  \
     uint64_t samples = 0;                                                                   \
     uint64_t total = 0;                                                                     \
     for (int uniuqevari = 0; uniuqevari < num; uniuqevari++){                               \
         clock_gettime(CLOCK_MONOTONIC, &start);                                             \
         func                                                                                \
-        clock_gettime(CLOCK_MONOTONIC, &end);                                               \
+       clock_gettime(CLOCK_MONOTONIC, &end);                                               \
         reset                                                                               \
         delta_us = (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec);\
         total += delta_us;                                                                  \
@@ -125,15 +125,14 @@ uint8_t true_ipmmcc[] = {
                                             0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00,
                                             0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
                                             0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                            0x00, 0x00, 0x00, 0x00,  0x00, 
+                                            0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00,
                                 0x82, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
                                 0x82, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
-                                0x00, 0x00, 
                             0x00, 0x00, 
                         0x00, 0x00, 
                     0x00, 0x00, 
                 0x00, 0x00, 
-            0x00, 0x00,
+            0x00, 0x00, 
         0x00, 0x00}; 
 /*
 [2] (1 elem)
@@ -188,7 +187,7 @@ int runtimes = 0;
 void test_encoding(
         void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
             struct timeval *, void *, size_t, uint8_t,
-            wandber_etsili_top_t *), 
+            wandder_etsili_top_t *), 
         wandder_buf_t **preencoded_ber, wandder_buf_t true_body){
 
     int64_t cin = 0xfeedbeef;
@@ -202,25 +201,31 @@ void test_encoding(
     memcpy(ipcontents, ipcontentsstring, iplen);
     uint8_t dir = 0x42; //doubles as iritype
 
-    wandber_etsili_top_t top;
+    wandder_etsili_top_t top;
     memset(&top, 0, sizeof top);
+    
+    
 
     (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
 
     for (size_t i = 0; i < sizeof true_header; i++){
-        if (true_header[i] != *(uint8_t *)(top.buf+i)){                
+        uint8_t trueval =  *(uint8_t*)(true_header+i);
+        uint8_t actualval = *(top.buf + i);
+        //if (true_header[i] != *(uint8_t *)(top.buf+i)){
+        if (trueval != actualval){
             PRINTBUF(top.buf, sizeof true_header)
-            printf("elemetn %ld differs\n", i);
+            printf("elemetn %ld in header differs, true[0x%02x], actual[0x%02x]\n", i, trueval, actualval);
             PRINTBUF(true_header, sizeof true_header)
             assert(0);
         }
     }
+    printf("header test done\n");
 
     for (size_t i = 0; i< true_body.len; i++){
-        uint8_t trueval = (((uint8_t *)true_body.buf)[0]);
-        uint8_t actualval = *(top.buf + sizeof true_header);
+        uint8_t trueval =  *(uint8_t*)((true_body.buf)+i);
+        uint8_t actualval = *((top.buf + sizeof true_header)+i);
         if (trueval != actualval){
-            printf("elemetn %ld differs, true[0x%02x], actual[0x%02x]\n", i, trueval, actualval);
+            printf("elemetn %ld in body differs, true[0x%02x], actual[0x%02x]\n", i, trueval, actualval);
             PRINTBUF(top.buf + sizeof true_header, top.len - sizeof true_header)
             printf("\n");
             PRINTBUF(true_body.buf, true_body.len);
@@ -258,8 +263,8 @@ void test_encoding(
 
         gettimeofday(&tv, NULL);
         (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
-        free(top.buf);
-        memset(&top, 0, sizeof top);
+        // free(top.buf);
+        // memset(&top, 0, sizeof top);
         cin = rand() >> (rand() % 64);
         seqno = rand() >> (rand() % 64);
         iplen = rand() % 1000;
@@ -285,11 +290,171 @@ void test_encoding(
     }
 }
 
+void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
+        struct timeval* tv, void* ipcontents, size_t iplen, uint8_t dir,
+        wandder_etsili_top_t* top){
+
+    if (top->buf){
+        //printf("IT ALREADY EXITS\n");
+        ber_rebuild_integer(
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            1, 
+            &(cin), 
+            sizeof cin,
+            top->header.cin);
+
+        ber_rebuild_integer(
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            4, 
+            &(seqno), 
+            sizeof seqno,
+            top->header.seqno);
+
+        ber_rebuild_integer(
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0, 
+            &(tv->tv_sec), 
+            sizeof tv->tv_sec,
+            top->header.sec);
+
+        ber_rebuild_integer(
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            1, 
+            &(tv->tv_usec), 
+            sizeof tv->tv_usec,
+            top->header.usec);
+        
+        ///////
+
+    if (dir == 0) {
+        memcpy(top->body.ipcc.dir, preencoded_ber[WANDDER_PREENCODE_DIRFROM]->buf, preencoded_ber[WANDDER_PREENCODE_DIRFROM]->len);
+    } else if (dir == 1) {
+        memcpy(top->body.ipcc.dir, preencoded_ber[WANDDER_PREENCODE_DIRTO]->buf, preencoded_ber[WANDDER_PREENCODE_DIRTO]->len);
+    } else if (dir == 2) {
+        memcpy(top->body.ipcc.dir, preencoded_ber[WANDDER_PREENCODE_DIRUNKNOWN]->buf, preencoded_ber[WANDDER_PREENCODE_DIRUNKNOWN]->len);
+    } else {
+        ber_rebuild_integer(
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0, 
+            &(dir), 
+            sizeof dir,
+            top->body.ipcc.dir);
+    }
+    uint8_t * ptr = top->body.ipcc.ipcontent;
+    // ptr += wandder_encode_inplace_ber(WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+    //         0,
+    //         WANDDER_TAG_IPPACKET,
+    //         ipcontents, 
+    //         iplen,
+    //         top->body.ipcc.ipcontent,
+    //         top->alloc_len - (ptr - top->buf));
+
+    // ENDCONSTRUCTEDBLOCK(ptr,7) //endseq
+
+    }
+    else {
+
+        wandder_encoder_ber_t* enc_ber = wandder_init_encoder_ber(1000, 0);
+        wandder_encoded_result_ber_t* res_ber;
+
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_USEQUENCE]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_1]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_PSDOMAINID]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_LIID]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_AUTHCC]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_3]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_0]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_OPERATORID]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_NETWORKELEMID]);
+        wandder_encode_endseq_ber(enc_ber, 1);
+
+        ptrdiff_t cin_diff = enc_ber->ptr - enc_ber->buf;
+        wandder_encode_next_ber(enc_ber, WANDDER_TAG_INTEGER,
+                WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(cin),
+                sizeof cin);
+
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_DELIVCC]);
+        wandder_encode_endseq_ber(enc_ber, 1);
+
+        ptrdiff_t seqno_diff = enc_ber->ptr - enc_ber->buf;
+        wandder_encode_next_ber(enc_ber, WANDDER_TAG_INTEGER,
+                WANDDER_CLASS_CONTEXT_PRIMITIVE, 4, &(seqno),
+                sizeof seqno);
+
+        if (preencoded_ber[WANDDER_PREENCODE_INTPOINTID]) {
+            wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_INTPOINTID]);
+            wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_7]);
+        } else {
+            wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_7]);
+        }
+        ptrdiff_t sec_diff = enc_ber->ptr - enc_ber->buf;
+        wandder_encode_next_ber(enc_ber, WANDDER_TAG_INTEGER,
+                WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
+                sizeof tv->tv_sec);
+
+        ptrdiff_t usec_diff = enc_ber->ptr - enc_ber->buf;
+        wandder_encode_next_ber(enc_ber, WANDDER_TAG_INTEGER,
+                WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(tv->tv_usec),
+                sizeof tv->tv_usec);
+        wandder_encode_endseq_ber(enc_ber, 1);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_TVCLASS]);
+        wandder_encode_endseq_ber(enc_ber, 1);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_2]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_1]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_USEQUENCE]);
+
+        ptrdiff_t dir_diff = enc_ber->ptr - enc_ber->buf;
+        if (dir == 0) {
+            wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_DIRFROM]);
+        } else if (dir == 1) {
+            wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_DIRTO]);
+        } else if (dir == 2) {
+            wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_DIRUNKNOWN]);
+        } else {
+            wandder_encode_next_ber(enc_ber, WANDDER_TAG_ENUM,
+                    WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &dir,
+                    sizeof dir);
+        }
+
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_2]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_2]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_IPCCOID]);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_1]);
+
+        ptrdiff_t ipcontent_diff = enc_ber->ptr - enc_ber->buf;
+        wandder_encode_next_ber(enc_ber, WANDDER_TAG_IPPACKET,
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, ipcontents, iplen);
+
+        wandder_encode_endseq_ber(enc_ber, 7);
+
+        res_ber = wandder_encode_finish_ber(enc_ber);
+        
+
+        //realign ptrs
+        ptrdiff_t offset = res_ber->buf - enc_ber->buf;
+
+        top->buf                    = res_ber->buf;
+        top->header.cin             = res_ber->buf + cin_diff;
+        top->header.seqno           = res_ber->buf + seqno_diff;
+        top->header.sec             = res_ber->buf + sec_diff;
+        top->header.usec            = res_ber->buf + usec_diff;
+        top->body.ipcc.dir          = res_ber->buf + dir_diff;
+        top->body.ipcc.ipcontent    = res_ber->buf + ipcontent_diff;
+        top->alloc_len = res_ber->len;
+        top->len = res_ber->len;
+
+        wandder_free_encoder_ber(enc_ber);
+        free(res_ber);
+
+    }
+}
+
+
 int main(int argc, char *argv[])
 {
     runtimes = strtod(argv[1],NULL);
 
-    wandber_etsili_intercept_details_t details;
+    wandder_etsili_intercept_details_t details;
     details.liid           = "liid"; 
     details.authcc         = "authcc";
     details.delivcc        = "delivcc";
@@ -297,41 +462,53 @@ int main(int argc, char *argv[])
     details.operatorid     = "operatorid";
     details.networkelemid  = "networkelemid";
 
-    wandder_buf_t **preencoded_ber = calloc(WANDBER_PREENCODE_LAST, sizeof preencoded_ber);
+    wandder_buf_t **preencoded_ber = calloc(WANDDER_PREENCODE_LAST, sizeof preencoded_ber);
 
     if (runtimes != 0){
         printf("prencoding..........");
-        wandber_etsili_clear_preencoded_fields_ber(preencoded_ber);
+        wandder_etsili_clear_preencoded_fields_ber(preencoded_ber);
         TIMEFUNC(
                 {   //function to time
-                    wandber_etsili_preencode_static_fields_ber(preencoded_ber, &details);
+                    wandder_etsili_preencode_static_fields_ber(preencoded_ber, &details);
                 },
                 {   //reset code
-                    wandber_etsili_clear_preencoded_fields_ber(preencoded_ber);
+                    wandder_etsili_clear_preencoded_fields_ber(preencoded_ber);
                 }, 
                 runtimes)
-        printf("Needs to be done once per stream\n");    
+        printf("Needs to be done once per stream\n");
     }
-    wandber_etsili_preencode_static_fields_ber(preencoded_ber, &details);
+    wandder_etsili_preencode_static_fields_ber(preencoded_ber, &details);
+
+    // wandder_free_encoder_ber(enc_ber);    
+    // //PRINTBUF(res_ber->buf, res_ber->len);
+    // wandder_free_encoded_result_ber(res_ber);
+
+    // free(item_buf->buf);
+    // free(item_buf);
 
     printf("\nRunning ipcc tests.....\n");
     wandder_buf_t true_ipcc_buf = {true_ipcc, sizeof true_ipcc};
-    test_encoding(&wandber_encode_etsi_ipcc, preencoded_ber, true_ipcc_buf);
+    test_encoding(&wandder_encode_etsi_ipcc_ber, preencoded_ber, true_ipcc_buf);
 
     printf("\nRunning ipmmcc tests...\n");
     wandder_buf_t true_ipmmcc_buf = {true_ipmmcc, sizeof true_ipmmcc};
-    test_encoding(&wandber_encode_etsi_ipmmcc, preencoded_ber, true_ipmmcc_buf);
+    test_encoding(&wandder_encode_etsi_ipmmcc_ber, preencoded_ber, true_ipmmcc_buf);
+
+    printf("\nRunning new method tests.....\n");
+    test_encoding(&new_metho_ipcc, preencoded_ber, true_ipcc_buf);
+
+
 
     // printf("\nRunning ipmmiri tests...\n");
     // wandder_buf_t true_ipmmiri_buf = {true_ipmmiri, sizeof true_ipmmiri};
-    // test_encoding(&wandber_encode_etsi_ipmmiri, preencoded_ber, true_ipmmiri_buf);
+    // test_encoding(&wandder_encode_etsi_ipmmiri_ber, preencoded_ber, true_ipmmiri_buf);
 
     // printf("Running ipiri tests...\n");
     // wandder_buf_t true_ipiri_buf = {true_ipiri, sizeof true_ipiri};
-    // test_encoding(&wandber_encode_etsi_ipiri, preencoded_ber, true_ipiri_buf);
+    // test_encoding(&wandder_encode_etsi_ipiri_ber, preencoded_ber, true_ipiri_buf);
 
 
-    wandber_etsili_clear_preencoded_fields_ber(preencoded_ber);
+    wandder_etsili_clear_preencoded_fields_ber(preencoded_ber);
     free(preencoded_ber);
 
     return 0;
