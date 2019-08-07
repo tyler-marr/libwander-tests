@@ -296,33 +296,33 @@ void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
 
     if (top->buf){
         //printf("IT ALREADY EXITS\n");
-        ber_rebuild_integer(
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            1, 
-            &(cin), 
-            sizeof cin,
-            top->header.cin);
+        // ber_rebuild_integer(
+        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        //     1, 
+        //     &(cin), 
+        //     sizeof cin,
+        //     top->header.cin);
 
-        ber_rebuild_integer(
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            4, 
-            &(seqno), 
-            sizeof seqno,
-            top->header.seqno);
+        // ber_rebuild_integer(
+        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        //     4, 
+        //     &(seqno), 
+        //     sizeof seqno,
+        //     top->header.seqno);
 
-        ber_rebuild_integer(
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0, 
-            &(tv->tv_sec), 
-            sizeof tv->tv_sec,
-            top->header.sec);
+        // ber_rebuild_integer(
+        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        //     0, 
+        //     &(tv->tv_sec), 
+        //     sizeof tv->tv_sec,
+        //     top->header.sec);
 
-        ber_rebuild_integer(
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            1, 
-            &(tv->tv_usec), 
-            sizeof tv->tv_usec,
-            top->header.usec);
+        // ber_rebuild_integer(
+        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        //     1, 
+        //     &(tv->tv_usec), 
+        //     sizeof tv->tv_usec,
+        //     top->header.usec);
         
         ///////
 
@@ -333,14 +333,14 @@ void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
     } else if (dir == 2) {
         memcpy(top->body.ipcc.dir, preencoded_ber[WANDDER_PREENCODE_DIRUNKNOWN]->buf, preencoded_ber[WANDDER_PREENCODE_DIRUNKNOWN]->len);
     } else {
-        ber_rebuild_integer(
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-            0, 
-            &(dir), 
-            sizeof dir,
-            top->body.ipcc.dir);
+        // ber_rebuild_integer(
+        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+        //     0, 
+        //     &(dir), 
+        //     sizeof dir,
+        //     top->body.ipcc.dir);
     }
-    uint8_t * ptr = top->body.ipcc.ipcontent;
+    //uint8_t * ptr = top->body.ipcc.ipcontent;
     // ptr += wandder_encode_inplace_ber(WANDDER_CLASS_CONTEXT_PRIMITIVE, 
     //         0,
     //         WANDDER_TAG_IPPACKET,
@@ -431,7 +431,7 @@ void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
         
 
         //realign ptrs
-        ptrdiff_t offset = res_ber->buf - enc_ber->buf;
+        //ptrdiff_t offset = res_ber->buf - enc_ber->buf;
 
         top->buf                    = res_ber->buf;
         top->header.cin             = res_ber->buf + cin_diff;

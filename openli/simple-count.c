@@ -23,6 +23,7 @@ struct cintracker {
 
 struct cintracker knowncins[256];
 int cinseen = 0;
+int firsttime = 1;
 
 static int per_packet(libtrace_packet_t *packet) {
 
@@ -45,6 +46,14 @@ static int per_packet(libtrace_packet_t *packet) {
                 return 0;
         }
 
+        if(firsttime){
+                printf("\n");
+                for(int i = 0 ; i < rem; i ++){
+                        printf("%02x ", *(uint8_t*)(buf+i));
+                }
+                printf("\n");
+                firsttime = 0;
+        }
         dec = wandder_create_etsili_decoder();
         wandder_attach_etsili_buffer(dec, (uint8_t *)buf, rem, false);
 
