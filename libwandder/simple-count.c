@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/socket.h>
 
 #include <libwandder.h>
 #include <libwandder_etsili.h>
@@ -25,7 +26,7 @@
     for (int uniuqevari = 0; uniuqevari < num; uniuqevari++){                               \
         clock_gettime(CLOCK_MONOTONIC, &start);                                             \
         func                                                                                \
-       clock_gettime(CLOCK_MONOTONIC, &end);                                               \
+       clock_gettime(CLOCK_MONOTONIC, &end);                                                \
         reset                                                                               \
         delta_us = (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec);\
         total += delta_us;                                                                  \
@@ -49,10 +50,10 @@ uint8_t true_header[] = {
                         0x80, 0x0a, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x69, 0x64,
                         0x81, 0x0d, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x65, 0x6c, 0x65, 0x6d, 0x69, 0x64, 
                     0x00, 0x00, 
-                    0x81, 0x83, 0x00, 0x00, 0x04, 0xfe, 0xed, 0xbe, 0xef, 
+                    0x81, 0x82, 0x00, 0x05, 0x00, 0xfe, 0xed, 0xbe, 0xef, 
                     0x82, 0x07, 0x64, 0x65, 0x6c, 0x69, 0x76, 0x63, 0x63, 
                 0x00, 0x00, 
-                0x84, 0x85, 0x00, 0x00, 0x00, 0x00, 0x02, 0xde, 0xad,
+                0x84, 0x84, 0x00, 0x00, 0x00, 0x03, 0x00, 0xde, 0xad,
                 0x86, 0x0a, 0x69, 0x6e, 0x74, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x69, 0x64,
                 0xa7, 0x80,
                     0x80, 0x83, 0x00, 0x00, 0x04, 0x0b, 0xad, 0xca, 0xfe, 
@@ -60,24 +61,6 @@ uint8_t true_header[] = {
                 0x00, 0x00,
                 0x88, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
             0x00, 0x00};
-/*
-[1] (8 elem)
-    [0] (8 byte) 04 00 02 02 05 01 11 00
-    [1] liid
-    [2] authcc
-    [3] (3 elem)
-        [0] (2 elem)
-            [0] operatorid
-            [1] networkelemid
-        [1] (4 byte) FEEDBEEF
-        [2] delivcc
-    [4] (2 byte) DEAD
-    [6] intpointid
-    [7] (2 elem)
-        [0] (4 byte) 0BADCAFE
-        [1] (2 byte) 1337
-    [8] (1 byte) 01
-  */
 
 uint8_t true_ipcc[] = {
             0xa2, 0x80, 
@@ -88,12 +71,12 @@ uint8_t true_ipcc[] = {
                             0xa2, 0x80, 
                                 0x80, 0x04, 0x05, 0x03, 0x0a, 0x02,
                                 0xa1, 0x80, 
-                                    0x80, 0x27, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00,
-                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                                0x00, 0x00, 0x00, 0x00,  0x00, 
-                                    0x00, 0x00, 
+                                    0x80, 0x27, 
+                                                0x74, 0x68, 0x69, 0x73,  0x20, 0x69, 0x73, 0x20,
+                                                0x74, 0x68, 0x65, 0x20,  0x69, 0x70, 0x70, 0x63,
+                                                0x20, 0x62, 0x6f, 0x64,  0x79, 0x20, 0x6f, 0x72,
+                                                0x20, 0x74, 0x68, 0x65,  0x20, 0x69, 0x70, 0x63,
+                                                0x6f, 0x6e, 0x74, 0x65,  0x6e, 0x74, 0x73,
                                 0x00, 0x00, 
                             0x00, 0x00, 
                         0x00, 0x00, 
@@ -101,17 +84,6 @@ uint8_t true_ipcc[] = {
                 0x00, 0x00, 
             0x00, 0x00, 
         0x00, 0x00}; 
-/*
-[2] (1 elem)
-    [1] (1 elem)
-        SEQUENCE (2 elem)
-            [0] B
-            [2] (1 elem)
-                [2] (2 elem)
-                    [0] (4 byte) 05030A02
-                    [1] (1 elem)
-                        [0] (39 byte) 0000000000000000000000000000000000000000000000000000000000000000000000…
-*/
 
 uint8_t true_ipmmcc[] = {
             0xa2, 0x80, 
@@ -121,11 +93,12 @@ uint8_t true_ipmmcc[] = {
                         0xa2, 0x80, 
                             0xac, 0x80,
                                 0x80, 0x04, 0x05, 0x05, 0x06, 0x02,
-                                0x80, 0x27, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                            0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00,
-                                            0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                            0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                            0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00,
+                                0x81, 0x27, 
+                                            0x74, 0x68, 0x69, 0x73,  0x20, 0x69, 0x73, 0x20,
+                                            0x74, 0x68, 0x65, 0x20,  0x69, 0x70, 0x70, 0x63,
+                                            0x20, 0x62, 0x6f, 0x64,  0x79, 0x20, 0x6f, 0x72,
+                                            0x20, 0x74, 0x68, 0x65,  0x20, 0x69, 0x70, 0x63,
+                                            0x6f, 0x6e, 0x74, 0x65,  0x6e, 0x74, 0x73,
                                 0x82, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
                                 0x82, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
                             0x00, 0x00, 
@@ -134,60 +107,74 @@ uint8_t true_ipmmcc[] = {
                 0x00, 0x00, 
             0x00, 0x00, 
         0x00, 0x00}; 
-/*
-[2] (1 elem)
-  [1] (1 elem)
-    SEQUENCE (2 elem)
-      [0] B
-      [2] (1 elem)
-        [12] (4 elem)
-          [0] (4 byte) 05050602
-          [0] (39 byte) 0000000000000000000000000000000000000000000000000000000000000000000000…
-          [2] (1 byte) 00
-          [2] (1 byte) 00
-*/
-
 
 uint8_t true_ipmmiri[] = {
             0xa2, 0x80, 
-                0xa1, 0x80,
+                0xa0, 0x80,
                     0x30, 0x80,
-                        0x80, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x42, 
-                        0xa2, 0x80, 
+                        0x80, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x07,
+                        0xa2, 0x80,
+                        0xab, 0x80,
+                            0x80, 0x04, 0x05, 0x05, 0x06, 0x01,
                             0xa1, 0x80,
-                                0x80, 0x04, 0x05, 0x05, 0x06, 0x01,
                                 0xa1, 0x80,
-                                    0x80, 0x27, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00,
-                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                                0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 
-                                                0x00, 0x00, 0x00, 0x00,  0x00, 
-                                    0x00, 0x00, 
-                                0x00, 0x00, 
-                            0x00, 0x00, 
-                        0x00, 0x00, 
-                    0x00, 0x00, 
+                                    0xa0, 0x80,
+                                        0x81, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+                                        0xa2, 0x80,
+                                            0x81, 0x04, 0x01, 0x01, 0x01, 0x01,
+                                        0x00, 0x00,
+                                        0x83, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03,
+                                        0x85, 0x04, 0xff, 0xff, 0x00, 0x00,
+                                    0x00, 0x00,
+                                    0xa1, 0x80,
+                                        0x81, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+                                        0xa2, 0x80,
+                                            0x81, 0x04, 0x02, 0x02, 0x02, 0x02,
+                                        0x00, 0x00,
+                                        0x83, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03,
+                                        0x85, 0x04, 0xff, 0xff, 0x00, 0x00,
+                                    0x00, 0x00,
+                                    0x82, 0x27, 
+                                        0x74, 0x68, 0x69, 0x73,  0x20, 0x69, 0x73, 0x20,
+                                        0x74, 0x68, 0x65, 0x20,  0x69, 0x70, 0x70, 0x63,
+                                        0x20, 0x62, 0x6f, 0x64,  0x79, 0x20, 0x6f, 0x72,
+                                        0x20, 0x74, 0x68, 0x65,  0x20, 0x69, 0x70, 0x63,
+                                        0x6f, 0x6e, 0x74, 0x65,  0x6e, 0x74, 0x73, 
+                                0x00, 0x00,
+                            0x00, 0x00,
+                        0x00, 0x00,
+                    0x00, 0x00,
                 0x00, 0x00,
             0x00, 0x00,
-        0x00, 0x00};
-/*
-[2] (1 elem)
-    [0] (1 elem)
-        SEQUENCE (2 elem)
-            [0] B
-            [2] (1 elem)
-                [1] (2 elem)
-                    [0] (4 byte) 05050601
-                    [1] (1 elem)
-                        [0] (39 byte) 0000000000000000000000000000000000000000000000000000000000000000000000…
-*/
+        0x00, 0x00,
+    0x00, 0x00};
+
+enum {
+    IPCC,
+    IPMMCC,
+    IPIRI,
+    IPMMIRI
+};
+
+#define ENCODE switch (testNum){\
+        case IPCC:\
+            wandder_encode_etsi_ipcc_ber(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);\
+        break;\
+        case IPMMCC:\
+            wandder_encode_etsi_ipmmcc_ber(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);\
+        break;\
+        case IPIRI:\
+            wandder_encode_etsi_ipiri_ber(preencoded_ber, cin, seqno, &tv, params, iritype, &top);\
+        break;\
+        case IPMMIRI:\
+            wandder_encode_etsi_ipmmiri_ber(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, iritype,\
+            ipsrc, ipdest, ipfamily, &top);\
+        break;\
+    }
 
 int runtimes = 0;
-
 void test_encoding(
-        void (*fun_ptr)(wandder_buf_t **, int64_t, int64_t,
-            struct timeval *, void *, size_t, uint8_t,
-            wandder_etsili_top_t *), 
+        int testNum, 
         wandder_buf_t **preencoded_ber, wandder_buf_t true_body){
 
     int64_t cin = 0xfeedbeef;
@@ -195,18 +182,25 @@ void test_encoding(
     struct timeval tv;
     tv.tv_sec = 0xBADCAFE;
     tv.tv_usec = 0x1337;
+    void * params = NULL;
     char* ipcontentsstring = "this is the ippc body or the ipcontents";
-    uint32_t iplen = strlen(ipcontentsstring);
+    size_t iplen = strlen(ipcontentsstring);
     uint8_t ipcontents[1000] = {3};
     memcpy(ipcontents, ipcontentsstring, iplen);
-    uint8_t dir = 0x42; //doubles as iritype
+    uint8_t dir = 0x42; 
+    uint8_t iritype = 0x7;
+
+    uint32_t source_ip = 0x01010101;
+    uint32_t dest_ip = 0x02020202;
+    uint8_t *ipsrc = &source_ip;
+    uint8_t *ipdest = &dest_ip;
+    int ipfamily = AF_INET;
+
 
     wandder_etsili_top_t top;
     memset(&top, 0, sizeof top);
     
-    
-
-    (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+    ENCODE
 
     for (size_t i = 0; i < sizeof true_header; i++){
         uint8_t trueval =  *(uint8_t*)(true_header+i);
@@ -221,11 +215,13 @@ void test_encoding(
     }
     printf("header test done\n");
 
-    for (size_t i = 0; i< true_body.len; i++){
+    ptrdiff_t bodylen = top.body.ipcc.ipcontent - (top.buf + sizeof true_header);
+
+    for (size_t i = 0; i < true_body.len; i++){
         uint8_t trueval =  *(uint8_t*)((true_body.buf)+i);
         uint8_t actualval = *((top.buf + sizeof true_header)+i);
         if (trueval != actualval){
-            printf("elemetn %ld in body differs, true[0x%02x], actual[0x%02x]\n", i, trueval, actualval);
+            printf("elemetn %ld in body differs, true[0x%02x], actual[0x%02x], bodylen = %ld\n", i, trueval, actualval, bodylen);
             PRINTBUF(top.buf + sizeof true_header, top.len - sizeof true_header)
             printf("\n");
             PRINTBUF(true_body.buf, true_body.len);
@@ -238,6 +234,45 @@ void test_encoding(
         assert(0);
     }
     printf("Passed test.\n");
+
+    //test decoder 
+
+    wandder_etsispec_t* etsi_dec = wandder_create_etsili_decoder();
+    wandder_attach_etsili_buffer(etsi_dec, top.buf, top.len, false);
+
+    if (wandder_etsili_is_keepalive(etsi_dec)) {
+            wandder_free_etsili_decoder(etsi_dec);
+            printf("is keep alive\n");
+    }
+
+    uint32_t dec_cin = wandder_etsili_get_cin(etsi_dec);
+    printf("dec cin %X\n", dec_cin);
+
+
+    struct timeval testtv = wandder_etsili_get_header_timestamp(etsi_dec);
+    printf("tv is 0x%lX.0x%lX\n", testtv.tv_sec, testtv.tv_usec);
+
+    
+    wandder_reset_decoder(etsi_dec->dec);
+
+    int pdu = wandder_etsili_get_pdu_length(etsi_dec);
+    printf("PDU is %d, (supposed to be %ld)\n", pdu, top.len);
+
+    int64_t seqnoesti = wandder_etsili_get_sequence_number(etsi_dec);
+    printf("seqno is 0x%lX, (supposed to be 0x%lX)\n", seqnoesti, (int64_t)seqno);
+
+    uint32_t rem;
+    char namesp[1024];
+    uint8_t *cchdr = wandder_etsili_get_cc_contents(etsi_dec, &rem, namesp, 1024);
+
+    uint8_t ident;
+    uint8_t *iricontents = wandder_etsili_get_iri_contents(etsi_dec, &rem, &ident, namesp, 1024);
+
+    printf("iricontents = %p,'%s'\n", iricontents, iricontents);
+    printf("cchdr = %p,'%s'\n ", cchdr, cchdr);
+
+    //PRINTBUF(etsi_dec->dec->source, etsi_dec->dec->sourcelen)
+
     free(top.buf);
     memset(&top, 0, sizeof top);
 
@@ -247,7 +282,7 @@ void test_encoding(
         printf("encoding firsttime..");
         TIMEFUNC(
             {   //function to time
-                (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+                ENCODE
             },
             {   //reset code
                 free(top.buf);
@@ -262,7 +297,7 @@ void test_encoding(
         printf("Needs to be done once per stream\n");
 
         gettimeofday(&tv, NULL);
-        (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+        ENCODE
         // free(top.buf);
         // memset(&top, 0, sizeof top);
         cin = rand() >> (rand() % 64);
@@ -274,7 +309,7 @@ void test_encoding(
         printf("update encoding.....");
         TIMEFUNC(
             {   //function to time
-                (*fun_ptr)(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir, &top);
+                ENCODE
             },
             {   //reset code
                 cin = rand() >> (rand() % 64);
@@ -449,9 +484,12 @@ void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
     }
 }
 
-
 int main(int argc, char *argv[])
 {
+    if (argc != 2){
+        printf("usage: %s [runtimes]\n", argv[0]);
+        return 0;
+    }
     runtimes = strtod(argv[1],NULL);
 
     wandder_etsili_intercept_details_t details;
@@ -479,32 +517,25 @@ int main(int argc, char *argv[])
     }
     wandder_etsili_preencode_static_fields_ber(preencoded_ber, &details);
 
-    // wandder_free_encoder_ber(enc_ber);    
-    // //PRINTBUF(res_ber->buf, res_ber->len);
-    // wandder_free_encoded_result_ber(res_ber);
-
-    // free(item_buf->buf);
-    // free(item_buf);
+   
+    wandder_buf_t true_ipcc_buf = {true_ipcc, sizeof true_ipcc};
+    wandder_buf_t true_ipmmcc_buf = {true_ipmmcc, sizeof true_ipmmcc};
+    wandder_buf_t true_ipmmiri_buf = {true_ipmmiri, sizeof true_ipmmiri};
+    wandder_buf_t true_ipiri_buf = {true_ipiri, sizeof true_ipiri};
 
     printf("\nRunning ipcc tests.....\n");
-    wandder_buf_t true_ipcc_buf = {true_ipcc, sizeof true_ipcc};
-    test_encoding(&wandder_encode_etsi_ipcc_ber, preencoded_ber, true_ipcc_buf);
+    test_encoding(IPCC, preencoded_ber, true_ipcc_buf);
 
-    printf("\nRunning ipmmcc tests...\n");
-    wandder_buf_t true_ipmmcc_buf = {true_ipmmcc, sizeof true_ipmmcc};
-    test_encoding(&wandder_encode_etsi_ipmmcc_ber, preencoded_ber, true_ipmmcc_buf);
+    printf("\nRunning ipmmcc tests...\n");    
+    test_encoding(IPMMCC, preencoded_ber, true_ipmmcc_buf);
 
     printf("\nRunning new method tests.....\n");
-    test_encoding(&new_metho_ipcc, preencoded_ber, true_ipcc_buf);
+    test_encoding(NEWIPCC, preencoded_ber, true_ipcc_buf);
 
+    printf("\nRunning ipmmiri tests...\n");
+    test_encoding(IPMMIRI, preencoded_ber, true_ipmmiri_buf);
 
-
-    // printf("\nRunning ipmmiri tests...\n");
-    // wandder_buf_t true_ipmmiri_buf = {true_ipmmiri, sizeof true_ipmmiri};
-    // test_encoding(&wandder_encode_etsi_ipmmiri_ber, preencoded_ber, true_ipmmiri_buf);
-
-    // printf("Running ipiri tests...\n");
-    // wandder_buf_t true_ipiri_buf = {true_ipiri, sizeof true_ipiri};
+    // printf("Running ipiri tests...\n");      //TODO
     // test_encoding(&wandder_encode_etsi_ipiri_ber, preencoded_ber, true_ipiri_buf);
 
 

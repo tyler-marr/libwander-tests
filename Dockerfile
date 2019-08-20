@@ -20,6 +20,9 @@ RUN apt-get -y update && apt-get -y install \
                 git \
                 iproute2 \
                 libgoogle-perftools-dev \
+                libpcap-dev \
+                bison \
+                flex \
                 libtrace4-tools \
                 libtrace4-dev \
                 libjudy-dev \
@@ -37,9 +40,12 @@ RUN apt-get -y update && apt-get -y install \
                 gdb \
                 valgrind
 
+RUN mkdir /home/install
 RUN mkdir /home/install/bin  
 ENV PATH="/home/install/bin:${PATH}"
-
+RUN echo "HISTCONTROL=ignoreboth" >> /root/.bashrc
+RUN echo "HISTCONTROL=ignoreboth" >> /.bashrc
+RUN echo  "/home/install/lib" >> /etc/ld.so.conf.d/libc.conf
 RUN mkdir /etc/openli  
 
 #COPY ./ .

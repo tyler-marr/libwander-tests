@@ -46,14 +46,6 @@ static int per_packet(libtrace_packet_t *packet) {
                 return 0;
         }
 
-        if(firsttime){
-                printf("\n");
-                for(int i = 0 ; i < rem; i ++){
-                        printf("%02x ", *(uint8_t*)(buf+i));
-                }
-                printf("\n");
-                firsttime = 0;
-        }
         dec = wandder_create_etsili_decoder();
         wandder_attach_etsili_buffer(dec, (uint8_t *)buf, rem, false);
 
@@ -71,10 +63,20 @@ static int per_packet(libtrace_packet_t *packet) {
         } else {
                 iricontents = wandder_etsili_get_iri_contents(dec, &rem,
                                 &ident, namesp, 1024);
+
+
+
                 if (!iricontents) {
+                        for(int i = 0; i< dec->dec->sourcelen; i++){
+                                printf("%02x ", *(uint8_t*)(buf+i));
+                        } exit(0);
                         wandder_free_etsili_decoder(dec);
+                        printf("invalid iri and cc\n");
+                        
                         return 0;
                 }
+
+
 
                 pktcount += 1;
                 bytecount += rem;
@@ -115,6 +117,9 @@ static int per_packet(libtrace_packet_t *packet) {
 
         seq = wandder_etsili_get_sequence_number(dec);
         if (seq != ctrack->nextseq) {
+                for(int i = 0; i< rem; i++){
+                        printf("%02x ", *(uint8_t*)(buf+i));
+                }
                 fprintf(fout, "error: unexpected sequence number for ETSI record (got %ld, wanted %ld -- cin=%u)\n", seq, ctrack->nextseq, cin);
                 wandder_free_etsili_decoder(dec);
                 return -1;
@@ -170,9 +175,11 @@ int main(int argc, char *argv[])
 
         while (trace_read_packet(trace,packet)>0) {
                 if (per_packet(packet) < 0) {
+                        printf("pkt err\n");
                         pkterror = 1;
                         break;
                 }
+                //printf("packet count %lu, byte count %lu\n", pktcount, bytecount);
         }
 
         if (pkterror == 0) {
@@ -199,6 +206,8 @@ int main(int argc, char *argv[])
 
         if (!pkterror) {
                 fprintf(fout, "success\n");
+        } else {
+                fprintf(fout, "failed\n");
         }
         fclose(fout);
         trace_destroy(trace);

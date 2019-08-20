@@ -32,6 +32,7 @@ if [ "$1" = "go" ]; then
 	read -r line1 < /tmp/openli-test.out;
 	if [[ $line1 != $SUCCESS ]]; then
 		echo "FAILED"
+		echo $line1
 	else 
 		echo "SUCCESS"
 	fi

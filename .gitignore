@@ -9,3 +9,5 @@ openli/resultlog.log
 
 libwandder/-p
 *.bin
+*~
+mycap.pcap

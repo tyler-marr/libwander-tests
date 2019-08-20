@@ -22,10 +22,16 @@ run_simple() {
     kill -TERM $TESTCPID
     kill -TERM $TESTPPID
 
+    sleep 10
+
     read -r line1 < /tmp/openli-test.out;
     if [[ $line1 != $SUCCESS ]]; then
+        echo "failing reason"
+        echo \"$line1\"
+        cat  /tmp/openli-test.out
        return 1
     fi
+    
 
     return 0
 }
@@ -38,6 +44,7 @@ echo "#####################Running ALU-shim tests"
 # TODO cap rxqueues to 1 to prevent RSS from messing up our tests
 
 if ! run_simple alushim 43332 3283 4591254 ALUSHIMTEST; then
+        sleep 10
         echo "Failed ALU-shim test"
         exit 1
 fi
@@ -59,7 +66,7 @@ if ! run_simple tcpsip 44333 17 12182 TCPSIPTEST; then
         exit 3
 fi
 
-sleep 10
+sleep 5
 echo " "
 echo "All tests passed."
 echo " "
