@@ -1,0 +1,25 @@
+operatorid: openlitest
+networkelementid: testcont
+interceptpointid: docker
+
+# tlscert: certs/clientA-crt.pem
+# tlskey: certs/clientA-key.pem
+# tlsca: certs/ca-crt.pem
+
+encoderthreads: 2
+inputs:
+  - uri: ring:eth1
+    threads: 2
+
+encoding: BER
+
+provisioneraddr: 172.20.0.2
+provisionerport: 9001
+
+alumirrors:
+   - ip: 10.15.0.243
+     port: 8500
+
+
+#etsitls: "false"
+

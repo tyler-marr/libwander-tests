@@ -38,7 +38,8 @@ RUN apt-get -y update && apt-get -y install \
                 emacs \
                 locate \
                 gdb \
-                valgrind
+                valgrind \
+                tcpdump
 
 RUN mkdir /home/install
 RUN mkdir /home/install/bin  

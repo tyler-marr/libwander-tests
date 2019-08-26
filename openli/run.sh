@@ -9,7 +9,7 @@ fi
 
 if [ "$1" = "col" ]; then
 	echo "Starting collector..."
-	openlicollector -c config/collector-config.yaml
+	openlicollector -c config/collector-config-der.yaml
 fi
 
 if [ "$1" = "pro" ]; then

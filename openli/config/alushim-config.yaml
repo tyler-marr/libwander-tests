@@ -22,7 +22,7 @@ clientaddr: 172.20.0.2
 mediationport: 12001
 mediationaddr: 172.20.0.2
 
-tlscert: certs/server-crt.pem
-tlskey: certs/server-key.pem
-tlsca: certs/ca-crt.pem
+# tlscert: certs/server-crt.pem
+# tlskey: certs/server-key.pem
+# tlsca: certs/ca-crt.pem
 

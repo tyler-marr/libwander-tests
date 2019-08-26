@@ -5,9 +5,9 @@ provisioneraddr: 172.20.0.2
 provisionerport: 12001
 mediatorid: 600
 
-tlscert: certs/clientB-crt.pem
-tlskey: certs/clientB-key.pem
-tlsca: certs/ca-crt.pem
+# tlscert: certs/clientB-crt.pem
+# tlskey: certs/clientB-key.pem
+# tlsca: certs/ca-crt.pem
 
 
 #etsitls: "false"

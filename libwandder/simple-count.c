@@ -153,8 +153,13 @@ enum {
     IPCC,
     IPMMCC,
     IPIRI,
-    IPMMIRI
+    IPMMIRI,
+    NEWIPCC
 };
+
+void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
+        struct timeval* tv, void* ipcontents, size_t iplen, uint8_t dir,
+        wandder_etsili_top_t* top);
 
 #define ENCODE switch (testNum){\
         case IPCC:\
@@ -169,6 +174,10 @@ enum {
         case IPMMIRI:\
             wandder_encode_etsi_ipmmiri_ber(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, iritype,\
             ipsrc, ipdest, ipfamily, &top);\
+        break;\
+        case NEWIPCC:\
+            new_metho_ipcc(preencoded_ber, cin, seqno, &tv, ipcontents, iplen, dir,\
+            &top);\
         break;\
     }
 
@@ -192,8 +201,8 @@ void test_encoding(
 
     uint32_t source_ip = 0x01010101;
     uint32_t dest_ip = 0x02020202;
-    uint8_t *ipsrc = &source_ip;
-    uint8_t *ipdest = &dest_ip;
+    uint8_t *ipsrc = (uint8_t*)&source_ip;
+    uint8_t *ipdest = (uint8_t*)&dest_ip;
     int ipfamily = AF_INET;
 
 
@@ -521,7 +530,7 @@ int main(int argc, char *argv[])
     wandder_buf_t true_ipcc_buf = {true_ipcc, sizeof true_ipcc};
     wandder_buf_t true_ipmmcc_buf = {true_ipmmcc, sizeof true_ipmmcc};
     wandder_buf_t true_ipmmiri_buf = {true_ipmmiri, sizeof true_ipmmiri};
-    wandder_buf_t true_ipiri_buf = {true_ipiri, sizeof true_ipiri};
+    //wandder_buf_t true_ipiri_buf = {true_ipiri, sizeof true_ipiri};
 
     printf("\nRunning ipcc tests.....\n");
     test_encoding(IPCC, preencoded_ber, true_ipcc_buf);
@@ -529,7 +538,7 @@ int main(int argc, char *argv[])
     printf("\nRunning ipmmcc tests...\n");    
     test_encoding(IPMMCC, preencoded_ber, true_ipmmcc_buf);
 
-    printf("\nRunning new method tests.....\n");
+    printf("\nRunning new ipcc method tests.....\n");
     test_encoding(NEWIPCC, preencoded_ber, true_ipcc_buf);
 
     printf("\nRunning ipmmiri tests...\n");

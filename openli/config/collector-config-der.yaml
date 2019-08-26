@@ -2,9 +2,9 @@ operatorid: openlitest
 networkelementid: testcont
 interceptpointid: docker
 
-tlscert: certs/clientA-crt.pem
-tlskey: certs/clientA-key.pem
-tlsca: certs/ca-crt.pem
+# tlscert: certs/clientA-crt.pem
+# tlskey: certs/clientA-key.pem
+# tlsca: certs/ca-crt.pem
 
 encoderthreads: 2
 inputs:

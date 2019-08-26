@@ -6,7 +6,7 @@ run_simple() {
 
     openlimediator start -c config/mediator-config.yaml &
     TESTMPID=$!
-    openlicollector start -c config/collector-config.yaml &
+    openlicollector start -c config/collector-config-der.yaml &
     TESTCPID=$!
     openliprovisioner -c config/${1}-config.yaml &
     TESTPPID=$!
@@ -29,9 +29,42 @@ run_simple() {
         echo "failing reason"
         echo \"$line1\"
         cat  /tmp/openli-test.out
+        echo "failed DER"
+       return 1
+    fi
+
+    echo "Passed DER"
+
+    openlimediator start -c config/mediator-config.yaml &
+    TESTMPID=$!
+    openlicollector start -c config/collector-config-ber.yaml &
+    TESTCPID=$!
+    openliprovisioner -c config/${1}-config.yaml &
+    TESTPPID=$!
+    
+    ./simple-count etsilive:172.20.0.2:${2} ${3} ${4} ${5} &
+    TESTPID=$!
+    sleep 5
+
+    tracereplay traces/${1}.pcap ring:eth1
+    sleep 10
+    kill -TERM $TESTPID
+    kill -TERM $TESTMPID
+    kill -TERM $TESTCPID
+    kill -TERM $TESTPPID
+
+    sleep 10
+
+    read -r line1 < /tmp/openli-test.out;
+    if [[ $line1 != $SUCCESS ]]; then
+        echo "failing reason"
+        echo \"$line1\"
+        cat  /tmp/openli-test.out
+        echo "failed BER"
        return 1
     fi
     
+    echo "Passed BER"
 
     return 0
 }
