@@ -15,7 +15,7 @@ run_simple() {
     TESTPID=$!
     sleep 5
 
-    tracereplay traces/${1}.pcap ring:eth1
+   tracereplay traces/${1}.pcap ring:eth1
     sleep 10
     kill -TERM $TESTPID
     kill -TERM $TESTMPID

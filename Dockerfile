@@ -47,7 +47,7 @@ ENV PATH="/home/install/bin:${PATH}"
 RUN echo "HISTCONTROL=ignoreboth" >> /root/.bashrc
 RUN echo "HISTCONTROL=ignoreboth" >> /.bashrc
 RUN echo  "/home/install/lib" >> /etc/ld.so.conf.d/libc.conf
-RUN mkdir /etc/openli  
+RUN mkdir /etc/openli
 
 #COPY ./ .
 

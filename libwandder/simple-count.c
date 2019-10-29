@@ -15,8 +15,7 @@
 #include <libwandder_etsili.h>
 
 #define PRINTBUF(ptr,len) for (size_t uniuqevari = 0; uniuqevari< len; uniuqevari++)\
-            printf("%02x ",*(uint8_t *)(ptr+uniuqevari));\
-        printf("\n");
+            printf("%02x ",*(uint8_t *)(ptr+uniuqevari));
 
 #define TIMEFUNC(func, reset, num) {                                                        \
     struct timespec start, end;                                                             \
@@ -149,6 +148,47 @@ uint8_t true_ipmmiri[] = {
         0x00, 0x00,
     0x00, 0x00};
 
+uint8_t true_ipiri[] = {
+            0xa2, 0x80, 
+                0xa0, 0x80,
+                    0x30, 0x80,
+                        0x80, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x07,
+                        0xa2, 0x80,
+                        0xab, 0x80,
+                            0x80, 0x04, 0x05, 0x05, 0x06, 0x01,
+                            0xa1, 0x80,
+                                0xa1, 0x80,
+                                    0xa0, 0x80,
+                                        0x81, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+                                        0xa2, 0x80,
+                                            0x81, 0x04, 0x01, 0x01, 0x01, 0x01,
+                                        0x00, 0x00,
+                                        0x83, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03,
+                                        0x85, 0x04, 0xff, 0xff, 0x00, 0x00,
+                                    0x00, 0x00,
+                                    0xa1, 0x80,
+                                        0x81, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+                                        0xa2, 0x80,
+                                            0x81, 0x04, 0x02, 0x02, 0x02, 0x02,
+                                        0x00, 0x00,
+                                        0x83, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03,
+                                        0x85, 0x04, 0xff, 0xff, 0x00, 0x00,
+                                    0x00, 0x00,
+                                    0x82, 0x27, 
+                                        0x74, 0x68, 0x69, 0x73,  0x20, 0x69, 0x73, 0x20,
+                                        0x74, 0x68, 0x65, 0x20,  0x69, 0x70, 0x70, 0x63,
+                                        0x20, 0x62, 0x6f, 0x64,  0x79, 0x20, 0x6f, 0x72,
+                                        0x20, 0x74, 0x68, 0x65,  0x20, 0x69, 0x70, 0x63,
+                                        0x6f, 0x6e, 0x74, 0x65,  0x6e, 0x74, 0x73, 
+                                0x00, 0x00,
+                            0x00, 0x00,
+                        0x00, 0x00,
+                    0x00, 0x00,
+                0x00, 0x00,
+            0x00, 0x00,
+        0x00, 0x00,
+    0x00, 0x00};
+
 enum {
     IPCC,
     IPMMCC,
@@ -181,10 +221,108 @@ void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
         break;\
     }
 
+typedef struct test_values {
+    uint32_t dec_cin;
+    struct timeval testtv;
+    int64_t seqno;
+    uint8_t *cchdr;
+    int64_t cclen;
+} test_values_t;
+
+
+int compare_test(wandder_etsili_top_t* top, test_values_t* test_values){
+    wandder_etsispec_t* etsi_dec = wandder_create_etsili_decoder();
+    wandder_attach_etsili_buffer(etsi_dec, top->buf, top->len, false);
+
+    if (wandder_etsili_is_keepalive(etsi_dec)) {
+            wandder_free_etsili_decoder(etsi_dec);
+            printf("is keep alive\n");
+    }
+
+    uint32_t dec_cin = wandder_etsili_get_cin(etsi_dec);
+    if (dec_cin != test_values->dec_cin){
+        printf("DOES NOT MATCH\n");
+        printf("cin \t%X %X\n", dec_cin, test_values->dec_cin);
+        wandder_free_etsili_decoder(etsi_dec);
+        return -1;
+    }
+
+    struct timeval testtv = wandder_etsili_get_header_timestamp(etsi_dec);
+    if (testtv.tv_sec  != test_values->testtv.tv_sec ||
+            testtv.tv_usec != test_values->testtv.tv_usec){
+        printf("DOES NOT MATCH\n");
+        printf("tv \t0x%lX.0x%lX, 0x%lX.0x%lX\n", 
+                testtv.tv_sec, testtv.tv_usec,
+                test_values->testtv.tv_sec, test_values->testtv.tv_usec);
+        wandder_free_etsili_decoder(etsi_dec);
+        return -1;
+    } 
+    
+    wandder_reset_decoder(etsi_dec->dec);
+
+    int64_t seqnoesti = wandder_etsili_get_sequence_number(etsi_dec);
+    if ( seqnoesti != test_values->seqno ) {
+        printf("DOES NOT MATCH\n");
+        printf("seqno \t0x%lX\n", seqnoesti);
+        wandder_free_etsili_decoder(etsi_dec);
+        return -1;
+    } 
+
+
+
+    uint32_t cchdr_len;
+    char namesp[1024];
+    uint8_t *cchdr = wandder_etsili_get_cc_contents(etsi_dec, &cchdr_len, namesp, 1024);
+
+   
+    int passed = 0;
+   
+    if ( cchdr ) {
+        if (memcmp((char *)cchdr, (char *)test_values->cchdr, test_values->cclen) != 0){
+            printf("CC DOES NOT MATCH\n");
+            printf("'");
+            PRINTBUF(cchdr, cchdr_len);
+            printf("', %d\n'", cchdr_len);
+            PRINTBUF(test_values->cchdr, test_values->cclen);
+            printf("', %ld\n", test_values->cclen);
+            wandder_free_etsili_decoder(etsi_dec);
+            return -1;
+        }
+        passed ^= 1;
+    } else {
+        wandder_reset_decoder(etsi_dec->dec);
+        uint8_t ident;
+        uint32_t iri_len;
+        uint8_t *iricontents = wandder_etsili_get_iri_contents(etsi_dec, &iri_len, &ident, namesp, 1024);
+
+        if ( iricontents ) {
+            if (memcmp((char *)iricontents, (char *)test_values->cchdr, test_values->cclen) != 0){
+                printf("IRI DOES NOT MATCH\n");
+                printf("'");
+                PRINTBUF(iricontents, iri_len);
+                printf("', %d\n'", iri_len);
+                PRINTBUF(test_values->cchdr, test_values->cclen);
+                printf("', %ld\n", test_values->cclen);
+                wandder_free_etsili_decoder(etsi_dec);
+                return -1;
+            }
+            passed ^= 1;
+        }
+    }
+
+    if (!passed) {
+        printf("either both or neither passed (iri, ip)\n");
+        wandder_free_etsili_decoder(etsi_dec);
+        return -1;
+    }
+
+    wandder_free_etsili_decoder(etsi_dec);
+    return 1;
+}
+
 int runtimes = 0;
-void test_encoding(
-        int testNum, 
-        wandder_buf_t **preencoded_ber, wandder_buf_t true_body){
+void test_encoding(int testNum, wandder_buf_t **preencoded_ber, 
+        wandder_buf_t true_body){
 
     int64_t cin = 0xfeedbeef;
     int64_t seqno = 0xdead;
@@ -205,6 +343,13 @@ void test_encoding(
     uint8_t *ipdest = (uint8_t*)&dest_ip;
     int ipfamily = AF_INET;
 
+    test_values_t test_values = {
+        cin,
+        tv,
+        seqno,
+        ipcontents,
+        iplen
+    };
 
     wandder_etsili_top_t top;
     memset(&top, 0, sizeof top);
@@ -217,8 +362,9 @@ void test_encoding(
         //if (true_header[i] != *(uint8_t *)(top.buf+i)){
         if (trueval != actualval){
             PRINTBUF(top.buf, sizeof true_header)
-            printf("elemetn %ld in header differs, true[0x%02x], actual[0x%02x]\n", i, trueval, actualval);
+            printf("\nelemetn %ld in header differs, true[0x%02x], actual[0x%02x]\n", i, trueval, actualval);
             PRINTBUF(true_header, sizeof true_header)
+            printf("\n");
             assert(0);
         }
     }
@@ -234,51 +380,24 @@ void test_encoding(
             PRINTBUF(top.buf + sizeof true_header, top.len - sizeof true_header)
             printf("\n");
             PRINTBUF(true_body.buf, true_body.len);
+            printf("\n");
             assert(0);
         }
     }
     if (true_body.len + sizeof true_header != top.len){
         printf("true size = %4ld, actual size = %4ld\n", true_body.len + sizeof true_header, top.len);
         PRINTBUF(top.buf, top.len)
+        printf("\n");
         assert(0);
     }
     printf("Passed test.\n");
 
     //test decoder 
 
-    wandder_etsispec_t* etsi_dec = wandder_create_etsili_decoder();
-    wandder_attach_etsili_buffer(etsi_dec, top.buf, top.len, false);
-
-    if (wandder_etsili_is_keepalive(etsi_dec)) {
-            wandder_free_etsili_decoder(etsi_dec);
-            printf("is keep alive\n");
+    if ( compare_test(&top, &test_values) == -1) {
+        printf("failed\n");
+        assert(0);
     }
-
-    uint32_t dec_cin = wandder_etsili_get_cin(etsi_dec);
-    printf("dec cin %X\n", dec_cin);
-
-
-    struct timeval testtv = wandder_etsili_get_header_timestamp(etsi_dec);
-    printf("tv is 0x%lX.0x%lX\n", testtv.tv_sec, testtv.tv_usec);
-
-    
-    wandder_reset_decoder(etsi_dec->dec);
-
-    int pdu = wandder_etsili_get_pdu_length(etsi_dec);
-    printf("PDU is %d, (supposed to be %ld)\n", pdu, top.len);
-
-    int64_t seqnoesti = wandder_etsili_get_sequence_number(etsi_dec);
-    printf("seqno is 0x%lX, (supposed to be 0x%lX)\n", seqnoesti, (int64_t)seqno);
-
-    uint32_t rem;
-    char namesp[1024];
-    uint8_t *cchdr = wandder_etsili_get_cc_contents(etsi_dec, &rem, namesp, 1024);
-
-    uint8_t ident;
-    uint8_t *iricontents = wandder_etsili_get_iri_contents(etsi_dec, &rem, &ident, namesp, 1024);
-
-    printf("iricontents = %p,'%s'\n", iricontents, iricontents);
-    printf("cchdr = %p,'%s'\n ", cchdr, cchdr);
 
     //PRINTBUF(etsi_dec->dec->source, etsi_dec->dec->sourcelen)
 
@@ -288,19 +407,32 @@ void test_encoding(
     
     if (runtimes != 0){
 
-        printf("encoding firsttime..");
+        printf("encoding firsttime..\n");
         TIMEFUNC(
             {   //function to time
                 ENCODE
             },
-            {   //reset code
+            {   
+                if ( compare_test(&top, &test_values) == -1) {
+                    printf("failed\n");
+                    return;
+                }
+                //reset code
                 free(top.buf);
                 memset(&top, 0, sizeof top);
                 cin = rand() >> (rand() % 64);
                 seqno = rand() >> (rand() % 64);
                 iplen = rand() % 1000;
-                dir = rand() %3;
+                dir = rand() % 3;
                 gettimeofday(&tv, NULL);
+                test_values.dec_cin = cin;
+                tv.tv_sec = 0;
+                tv.tv_usec = 0;
+                test_values.testtv.tv_sec  = tv.tv_sec;
+                test_values.testtv.tv_usec  = tv.tv_usec;
+                test_values.seqno   = seqno;
+                test_values.cchdr   = ipcontents;
+                test_values.cclen   = iplen; 
             }, 
             runtimes)
         printf("Needs to be done once per stream\n");
@@ -314,6 +446,12 @@ void test_encoding(
         iplen = rand() % 1000;
         dir = rand() %3;
         gettimeofday(&tv, NULL);
+        test_values.dec_cin = cin;
+        test_values.testtv.tv_sec  = tv.tv_sec;
+        test_values.testtv.tv_usec  = tv.tv_usec;
+        test_values.seqno   = seqno;
+        test_values.cchdr   = ipcontents;
+        test_values.cclen   = iplen; 
 
         printf("update encoding.....");
         TIMEFUNC(
@@ -321,11 +459,21 @@ void test_encoding(
                 ENCODE
             },
             {   //reset code
+                if ( compare_test(&top, &test_values) == -1) {
+                    printf("failed\n");
+                    return;
+                }
                 cin = rand() >> (rand() % 64);
                 seqno = rand() >> (rand() % 64);
                 iplen = rand() % 1000;
                 dir = rand() %3;
                 gettimeofday(&tv, NULL);
+                test_values.dec_cin = cin;
+                test_values.testtv.tv_sec  = tv.tv_sec;
+                test_values.testtv.tv_usec  = tv.tv_usec;
+                test_values.seqno   = seqno;
+                test_values.cchdr   = ipcontents;
+                test_values.cclen   = iplen; 
             }, 
             runtimes)
         printf("Needs to be done everytime\n");
@@ -334,72 +482,18 @@ void test_encoding(
     }
 }
 
-void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
-        struct timeval* tv, void* ipcontents, size_t iplen, uint8_t dir,
-        wandder_etsili_top_t* top){
+typedef struct estili_pshdr_diff {
+    
+    ptrdiff_t cin_diff;
+    ptrdiff_t seqno_diff;
+    ptrdiff_t sec_diff;
+    ptrdiff_t usec_diff;
+}   estili_pshdr_diff_t;
 
-    if (top->buf){
-        //printf("IT ALREADY EXITS\n");
-        // ber_rebuild_integer(
-        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        //     1, 
-        //     &(cin), 
-        //     sizeof cin,
-        //     top->header.cin);
-
-        // ber_rebuild_integer(
-        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        //     4, 
-        //     &(seqno), 
-        //     sizeof seqno,
-        //     top->header.seqno);
-
-        // ber_rebuild_integer(
-        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        //     0, 
-        //     &(tv->tv_sec), 
-        //     sizeof tv->tv_sec,
-        //     top->header.sec);
-
-        // ber_rebuild_integer(
-        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        //     1, 
-        //     &(tv->tv_usec), 
-        //     sizeof tv->tv_usec,
-        //     top->header.usec);
-        
-        ///////
-
-    if (dir == 0) {
-        memcpy(top->body.ipcc.dir, preencoded_ber[WANDDER_PREENCODE_DIRFROM]->buf, preencoded_ber[WANDDER_PREENCODE_DIRFROM]->len);
-    } else if (dir == 1) {
-        memcpy(top->body.ipcc.dir, preencoded_ber[WANDDER_PREENCODE_DIRTO]->buf, preencoded_ber[WANDDER_PREENCODE_DIRTO]->len);
-    } else if (dir == 2) {
-        memcpy(top->body.ipcc.dir, preencoded_ber[WANDDER_PREENCODE_DIRUNKNOWN]->buf, preencoded_ber[WANDDER_PREENCODE_DIRUNKNOWN]->len);
-    } else {
-        // ber_rebuild_integer(
-        //     WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-        //     0, 
-        //     &(dir), 
-        //     sizeof dir,
-        //     top->body.ipcc.dir);
-    }
-    //uint8_t * ptr = top->body.ipcc.ipcontent;
-    // ptr += wandder_encode_inplace_ber(WANDDER_CLASS_CONTEXT_PRIMITIVE, 
-    //         0,
-    //         WANDDER_TAG_IPPACKET,
-    //         ipcontents, 
-    //         iplen,
-    //         top->body.ipcc.ipcontent,
-    //         top->alloc_len - (ptr - top->buf));
-
-    // ENDCONSTRUCTEDBLOCK(ptr,7) //endseq
-
-    }
-    else {
-
-        wandder_encoder_ber_t* enc_ber = wandder_init_encoder_ber(1000, 0);
-        wandder_encoded_result_ber_t* res_ber;
+void new_etsili_pshdr_pc(wandder_encoder_ber_t* enc_ber, 
+        wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
+        struct timeval* tv, wandder_etsili_top_t* top, 
+        estili_pshdr_diff_t* pshdr_diff) {
 
         wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_USEQUENCE]);
         wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_1]);
@@ -412,37 +506,123 @@ void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
         wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_NETWORKELEMID]);
         wandder_encode_endseq_ber(enc_ber, 1);
 
-        ptrdiff_t cin_diff = enc_ber->ptr - enc_ber->buf;
+        pshdr_diff->cin_diff = enc_ber->ptr - enc_ber->buf;
         wandder_encode_next_ber(enc_ber, WANDDER_TAG_INTEGER,
-                WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(cin),
-                sizeof cin);
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(cin),
+        sizeof cin);
 
         wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_DELIVCC]);
         wandder_encode_endseq_ber(enc_ber, 1);
 
-        ptrdiff_t seqno_diff = enc_ber->ptr - enc_ber->buf;
+        pshdr_diff->seqno_diff = enc_ber->ptr - enc_ber->buf;
         wandder_encode_next_ber(enc_ber, WANDDER_TAG_INTEGER,
-                WANDDER_CLASS_CONTEXT_PRIMITIVE, 4, &(seqno),
-                sizeof seqno);
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 4, &(seqno),
+        sizeof seqno);
 
         if (preencoded_ber[WANDDER_PREENCODE_INTPOINTID]) {
             wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_INTPOINTID]);
-            wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_7]);
-        } else {
-            wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_7]);
         }
-        ptrdiff_t sec_diff = enc_ber->ptr - enc_ber->buf;
-        wandder_encode_next_ber(enc_ber, WANDDER_TAG_INTEGER,
-                WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
-                sizeof tv->tv_sec);
+        wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_7]);
 
-        ptrdiff_t usec_diff = enc_ber->ptr - enc_ber->buf;
+
+        pshdr_diff->sec_diff = enc_ber->ptr - enc_ber->buf;
         wandder_encode_next_ber(enc_ber, WANDDER_TAG_INTEGER,
-                WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(tv->tv_usec),
-                sizeof tv->tv_usec);
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, &(tv->tv_sec),
+        sizeof tv->tv_sec);
+
+        pshdr_diff->usec_diff = enc_ber->ptr - enc_ber->buf;
+        wandder_encode_next_ber(enc_ber, WANDDER_TAG_INTEGER,
+        WANDDER_CLASS_CONTEXT_PRIMITIVE, 1, &(tv->tv_usec),
+        sizeof tv->tv_usec);
+
         wandder_encode_endseq_ber(enc_ber, 1);
+
         wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_TVCLASS]);
         wandder_encode_endseq_ber(enc_ber, 1);
+}
+
+void update_etsili_pshdr_pc(wandder_etsili_top_t* top, int64_t cin,
+        int64_t seqno, struct timeval* tv){
+    
+
+    ber_rebuild_integer(
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            1, 
+            &(cin), 
+            sizeof cin,
+            top->header.cin);
+
+    ber_rebuild_integer(
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            4, 
+            &(seqno), 
+            sizeof seqno,
+            top->header.seqno);
+
+    ber_rebuild_integer(
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            0, 
+            &(tv->tv_sec), 
+            sizeof tv->tv_sec,
+            top->header.sec);
+
+    ber_rebuild_integer(
+            WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+            1, 
+            &(tv->tv_usec), 
+            sizeof tv->tv_usec,
+            top->header.usec);
+}
+
+void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
+        struct timeval* tv, void* ipcontents, size_t iplen, uint8_t dir,
+        wandder_etsili_top_t* top){
+
+    wandder_encoded_result_ber_t* res_ber;
+    estili_pshdr_diff_t pshdr_diff;
+
+        
+
+    if (top->buf){
+        update_etsili_pshdr_pc(top, cin, seqno, tv);
+
+        if (dir == 0) {
+            memcpy(top->body.ipcc.dir, 
+                    preencoded_ber[WANDDER_PREENCODE_DIRFROM]->buf, 
+                    preencoded_ber[WANDDER_PREENCODE_DIRFROM]->len);
+        } else if (dir == 1) {
+            memcpy(top->body.ipcc.dir, 
+                    preencoded_ber[WANDDER_PREENCODE_DIRTO]->buf, 
+                    preencoded_ber[WANDDER_PREENCODE_DIRTO]->len);
+        } else if (dir == 2) {
+            memcpy(top->body.ipcc.dir, 
+                    preencoded_ber[WANDDER_PREENCODE_DIRUNKNOWN]->buf, 
+                    preencoded_ber[WANDDER_PREENCODE_DIRUNKNOWN]->len);
+        } else {
+            ber_rebuild_integer(
+                WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+                0, 
+                &(dir), 
+                sizeof dir,
+                top->body.ipcc.dir);
+        }
+        uint8_t * ptr = top->body.ipcc.ipcontent;
+        ptr += wandder_encode_inplace_ber(WANDDER_CLASS_CONTEXT_PRIMITIVE, 
+                0,
+                WANDDER_TAG_IPPACKET,
+                ipcontents, 
+                iplen,
+                top->body.ipcc.ipcontent,
+                top->alloc_len - (ptr - top->buf));
+
+        ENDCONSTRUCTEDBLOCK(ptr,7) //endseq
+        
+    } else {
+
+        wandder_encoder_ber_t* enc_ber = wandder_init_encoder_ber(5000, 0);
+        
+        new_etsili_pshdr_pc(enc_ber, preencoded_ber, cin, seqno, tv, top, &pshdr_diff);
+
         wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_2]);
         wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_CSEQUENCE_1]);
         wandder_append_preencoded_ber(enc_ber, preencoded_ber[WANDDER_PREENCODE_USEQUENCE]);
@@ -467,29 +647,23 @@ void new_metho_ipcc(wandder_buf_t** preencoded_ber, int64_t cin, int64_t seqno,
 
         ptrdiff_t ipcontent_diff = enc_ber->ptr - enc_ber->buf;
         wandder_encode_next_ber(enc_ber, WANDDER_TAG_IPPACKET,
-            WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, ipcontents, iplen);
+                WANDDER_CLASS_CONTEXT_PRIMITIVE, 0, ipcontents, iplen);
 
         wandder_encode_endseq_ber(enc_ber, 7);
 
         res_ber = wandder_encode_finish_ber(enc_ber);
-        
-
-        //realign ptrs
-        //ptrdiff_t offset = res_ber->buf - enc_ber->buf;
 
         top->buf                    = res_ber->buf;
-        top->header.cin             = res_ber->buf + cin_diff;
-        top->header.seqno           = res_ber->buf + seqno_diff;
-        top->header.sec             = res_ber->buf + sec_diff;
-        top->header.usec            = res_ber->buf + usec_diff;
+        top->header.cin             = res_ber->buf + pshdr_diff.cin_diff;
+        top->header.seqno           = res_ber->buf + pshdr_diff.seqno_diff;
+        top->header.sec             = res_ber->buf + pshdr_diff.sec_diff;
+        top->header.usec            = res_ber->buf + pshdr_diff.usec_diff;
         top->body.ipcc.dir          = res_ber->buf + dir_diff;
         top->body.ipcc.ipcontent    = res_ber->buf + ipcontent_diff;
-        top->alloc_len = res_ber->len;
-        top->len = res_ber->len;
+        top->len                    = res_ber->len;
 
         wandder_free_encoder_ber(enc_ber);
         free(res_ber);
-
     }
 }
 
@@ -526,27 +700,26 @@ int main(int argc, char *argv[])
     }
     wandder_etsili_preencode_static_fields_ber(preencoded_ber, &details);
 
-   
+
+
     wandder_buf_t true_ipcc_buf = {true_ipcc, sizeof true_ipcc};
-    wandder_buf_t true_ipmmcc_buf = {true_ipmmcc, sizeof true_ipmmcc};
-    wandder_buf_t true_ipmmiri_buf = {true_ipmmiri, sizeof true_ipmmiri};
-    //wandder_buf_t true_ipiri_buf = {true_ipiri, sizeof true_ipiri};
-
-    printf("\nRunning ipcc tests.....\n");
-    test_encoding(IPCC, preencoded_ber, true_ipcc_buf);
-
-    printf("\nRunning ipmmcc tests...\n");    
-    test_encoding(IPMMCC, preencoded_ber, true_ipmmcc_buf);
-
     printf("\nRunning new ipcc method tests.....\n");
     test_encoding(NEWIPCC, preencoded_ber, true_ipcc_buf);
 
+    printf("\nRunning ipcc tests.....\n");
+    test_encoding(IPCC, preencoded_ber, true_ipcc_buf);    
+
+    wandder_buf_t true_ipmmcc_buf = {true_ipmmcc, sizeof true_ipmmcc};
+    printf("\nRunning ipmmcc tests...\n");    
+    test_encoding(IPMMCC, preencoded_ber, true_ipmmcc_buf);
+
+    wandder_buf_t true_ipmmiri_buf = {true_ipmmiri, sizeof true_ipmmiri};
     printf("\nRunning ipmmiri tests...\n");
     test_encoding(IPMMIRI, preencoded_ber, true_ipmmiri_buf);
 
-    // printf("Running ipiri tests...\n");      //TODO
-    // test_encoding(&wandder_encode_etsi_ipiri_ber, preencoded_ber, true_ipiri_buf);
-
+    // wandder_buf_t true_ipiri_buf = {true_ipiri, sizeof true_ipiri};
+    // printf("\nRunning IPIRI tests...\n");
+    // test_encoding(IPIRI, preencoded_ber, true_ipiri_buf);
 
     wandder_etsili_clear_preencoded_fields_ber(preencoded_ber);
     free(preencoded_ber);
